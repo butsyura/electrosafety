@@ -1,0 +1,2043 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Симулятор «Електробезпека в системах електропостачання»</title>
+<style>
+  :root{
+    --panel-bg:#e9e7e1;
+    --panel-border:#3a4a52;
+    --bus-a:#c9b400;
+    --bus-b:#1f7a3d;
+    --bus-c:#8a2f1e;
+    --bus-n:#1a1a1a;
+    --bus-pe:#2f8f4e;
+    --terminal:#c81e2c;
+    --terminal-dark:#7a0e17;
+    --yellow:#f2c200;
+    --rail:#8f8f8f;
+    --ink:#1c2226;
+  }
+  html{ overflow-y: scroll; }
+  body{
+    margin:0;
+    background:#f4f3ef;
+    font-family:'Segoe UI',Tahoma,Arial,sans-serif;
+    color:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:24px 12px;
+  }
+  h1{
+    font-size:20px;
+    font-weight:600;
+    letter-spacing:.02em;
+    text-align:center;
+    margin:0 0 4px;
+  }
+  h2{
+    font-size:15px;
+    font-weight:400;
+    color:#5a6268;
+    margin:0 0 18px;
+    text-align:center;
+  }
+  .frame{
+    background:var(--panel-bg);
+    border:3px solid var(--panel-border);
+    border-radius:6px;
+    padding:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.12);
+    max-width:73vw;
+    width:100%;
+  }
+  /* ===== макет: підказка зліва (вертикально) + панель-стенд справа ===== */
+  .lab-layout{
+    display:flex;
+    align-items:flex-start;
+    gap:16px;
+    max-width:73vw;
+    width:100%;
+    margin-bottom:16px;
+  }
+  .lab-layout .left-col{
+    flex:0 0 230px;
+    width:230px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .lab-layout .left-col #hint-box{
+    margin-bottom:0;
+  }
+  .lab-layout #hint-box2{
+    flex:0 0 230px;
+    width:230px;
+    max-width:230px;
+    margin-bottom:0;
+    align-self:stretch;
+  }
+  .lab-layout .frame{
+    flex:1 1 auto;
+    min-width:0;
+    max-width:none;
+    width:auto;
+    margin-bottom:0;
+  }
+
+  #mm-box{
+    background:#eef3f7;
+    border:2px solid #2f6fa0;
+    border-radius:8px;
+    padding:10px 12px;
+    box-sizing:border-box;
+  }
+  #mm-title{
+    font-size:11px;
+    font-weight:700;
+    color:#1c4a70;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    margin-bottom:6px;
+  }
+  #mm-modes{ display:flex; gap:6px; margin-bottom:8px; }
+  .mm-mode-btn{
+    flex:1;
+    font-size:12px;
+    padding:5px 0;
+    border-radius:5px;
+    border:1px solid #2f6fa0;
+    background:#fff;
+    color:#1c4a70;
+    cursor:pointer;
+  }
+  .mm-mode-btn.active{ background:#2f6fa0; color:#fff; }
+  #mm-readout{
+    font-size:12px;
+    line-height:1.45;
+    color:#20303a;
+    min-height:54px;
+    margin-bottom:8px;
+  }
+  #mm-clear{
+    font-size:12px;
+    padding:6px 10px;
+    width:100%;
+    box-sizing:border-box;
+    border-radius:5px;
+    border:1px solid #999;
+    background:#f2f2ef;
+    cursor:pointer;
+  }
+
+  #hint-box{
+    min-height:64px;
+    background:#fff9e0;
+    border:2px solid #e0b400;
+    border-radius:8px;
+    padding:12px 14px;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+    box-sizing:border-box;
+  }
+  #hint-step{
+    font-size:11px;
+    font-weight:700;
+    color:#8a6c00;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    margin-bottom:4px;
+  }
+  #hint-text{
+    font-size:13px;
+    line-height:1.45;
+    color:#2c2c2c;
+  }
+  #hint-buttons{ margin-top:10px; display:flex; flex-direction:column; gap:8px; }
+  #hint-buttons button{
+    font-size:12px;
+    padding:7px 10px;
+    width:100%;
+    box-sizing:border-box;
+    border-radius:5px;
+    border:1px solid #999;
+    background:#f2f2ef;
+    cursor:pointer;
+  }
+  #hint-buttons button:disabled{ cursor:not-allowed; }
+  #hint-next{ background:#57c26c; color:#000 !important; -webkit-text-fill-color:#000; border-color:#1f5a2b; }
+  #hint-next:disabled{ background:#c9c9c4; color:#000 !important; -webkit-text-fill-color:#000; border-color:#999; opacity:1; }
+
+  #tabs{ max-width:73vw; width:100%; display:flex; gap:8px; margin-bottom:14px; }
+  .tab{
+    font-size:15px;
+    padding:10px 18px;
+    border-radius:6px 6px 0 0;
+    border:1px solid #999;
+    border-bottom:none;
+    background:#d9d9d4;
+    color:#444;
+    cursor:pointer;
+  }
+  .tab.active{ background:var(--panel-bg); color:var(--ink); font-weight:700; border-color:var(--panel-border); }
+
+  #legend, #legend2{
+    max-width:73vw;
+    width:100%;
+    background:#eef0ec;
+    border:1px solid #99a396;
+    border-radius:6px;
+    padding:10px 16px;
+    margin-bottom:14px;
+    font-size:14px;
+    line-height:1.6;
+    color:#333;
+  }
+
+  /* ===== стартовий екран ===== */
+  #start-screen{
+    position:fixed; inset:0; background:#2c2c2c;
+    display:flex; align-items:center; justify-content:center;
+    z-index:1000;
+  }
+  #start-card{
+    background:#fff; border-radius:10px; padding:32px 36px;
+    max-width:480px; width:90%; box-shadow:0 10px 40px rgba(0,0,0,.3);
+  }
+  #start-card h2{ font-size:18px; margin:0 0 10px; }
+  #start-card p{ font-size:14px; color:#555; margin:0 0 18px; }
+  #start-card label{ display:block; font-size:13px; font-weight:700; margin:12px 0 4px; }
+  #start-card input{
+    width:100%; box-sizing:border-box; padding:10px 12px;
+    font-size:15px; border:1px solid #999; border-radius:5px;
+  }
+  #start-error{ color:#c81e2c; font-size:13px; min-height:18px; margin-top:6px; }
+  #start-btn{
+    margin-top:18px; width:100%; padding:12px; font-size:16px; font-weight:700;
+    background:#2f7a3d; color:#fff; border:none; border-radius:6px; cursor:pointer;
+  }
+  #start-btn:hover{ background:#256030; }
+
+  /* ===== секція результатів ===== */
+  #results-section{
+    max-width:73vw; width:100%;
+    background:#fff; border:1px solid #999; border-radius:8px;
+    padding:18px 22px; margin:20px 0;
+  }
+  #results-section h2{ font-size:17px; margin:0 0 8px; }
+  .hint-text-small{ font-size:13px; color:#666; margin:0 0 12px; }
+  #results-table{
+    width:100%; border-collapse:collapse; font-size:12px; margin-bottom:10px;
+  }
+  #results-table th, #results-table td{
+    border:1px solid #ccc; padding:6px 8px; text-align:left;
+  }
+  #results-table th{ background:#eef0ec; }
+  #results-empty{ font-size:13px; color:#888; font-style:italic; }
+  #conclusion-text{
+    width:100%; box-sizing:border-box; font-size:14px; padding:10px;
+    border:1px solid #999; border-radius:5px; font-family:inherit;
+  }
+  #report-btn{
+    margin-top:14px; padding:12px 20px; font-size:15px; font-weight:700;
+    background:#2f6fa0; color:#fff; border:none; border-radius:6px; cursor:pointer;
+  }
+  #report-btn:hover{ background:#1c4a70; }
+
+  /* ===== друкований звіт (прихований, показується лише при друці) ===== */
+  #report-view{ display:none; }
+  #report-panel-snapshot svg{ width:100%; height:auto; max-height:380px; }
+  @media print{
+    body *{ visibility:hidden; }
+    #report-view, #report-view *{ visibility:visible; }
+    #report-view{ display:block; position:absolute; top:0; left:0; width:100%; }
+    #report-table{ width:100%; border-collapse:collapse; font-size:11px; }
+    #report-table th, #report-table td{ border:1px solid #333; padding:4px 6px; }
+  }
+
+  #app-footer{
+    max-width:73vw; width:100%; text-align:center;
+    font-size:12px; color:#888; padding:14px 0 6px;
+  }
+
+  #hint-box2{
+    min-height:64px;
+    background:#e7f0fa;
+    border:2px solid #2f6fa0;
+    border-radius:8px;
+    padding:12px 14px;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+    box-sizing:border-box;
+  }
+  #hint-step2{ font-size:11px; font-weight:700; color:#1c4a70; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+  #hint-text2{ font-size:13px; line-height:1.45; color:#2c2c2c; }
+  #module-1, #module-2{ min-height: 1050px; }
+  svg{ display:block; width:100%; height:auto; }
+  text{ font-family:'Segoe UI',Tahoma,Arial,sans-serif; }
+  .lbl{ font-size:20px; fill:var(--ink); font-weight:600; }
+  .lbl-sm{ font-size:17px; fill:#2c3236; font-weight:600; }
+  .lbl-bus{ font-size:24px; font-weight:800; }
+  .term{ fill:var(--terminal); stroke:var(--terminal-dark); stroke-width:1.6; }
+  .rail{ stroke:var(--rail); stroke-width:5; }
+  .ctrl{ cursor:pointer; }
+  .ctrl:hover{ opacity:.85; }
+  .gs-btn.selected rect{ fill:#2f6fa0; stroke:#1c4a70; }
+  .gs-btn.selected text{ fill:#fff; }
+  #ctrl-pen.armed rect{ fill:#c81e2c; stroke:#7a0e17; }
+  #ctrl-pen.armed text{ fill:#fff; }
+  @keyframes pulse-danger{ 0%,100%{opacity:.9;} 50%{opacity:.15;} }
+  #danger-ring.danger{ animation: pulse-danger 0.7s infinite; }
+
+  /* ===== довідка «Про програму» ===== */
+  #info-btn{
+    position:fixed; top:14px; right:16px; z-index:1100;
+    width:38px; height:38px; border-radius:50%;
+    background:#2f6fa0; color:#fff; border:2px solid #fff;
+    font:italic 700 22px Georgia,'Times New Roman',serif;
+    cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.3);
+    display:flex; align-items:center; justify-content:center; padding:0;
+  }
+  #info-btn:hover{ background:#1c4a70; }
+  #info-overlay{
+    display:none; position:fixed; inset:0; z-index:1200;
+    background:rgba(0,0,0,.55); align-items:center; justify-content:center;
+  }
+  #info-overlay.open{ display:flex; }
+  #info-card{
+    background:#fff; border-radius:10px; padding:26px 32px 22px;
+    max-width:640px; width:92%; max-height:86vh; overflow-y:auto;
+    box-shadow:0 10px 40px rgba(0,0,0,.35); position:relative;
+    font-size:14px; line-height:1.6; color:#222;
+  }
+  #info-card h3{ margin:0 0 12px; font-size:18px; color:#1c4a70; }
+  #info-card h4{ margin:18px 0 6px; font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:#555; }
+  #info-card p{ margin:0 0 10px; }
+  #info-card ul{ margin:0 0 10px; padding-left:20px; }
+  #info-card .authors{ margin:0; padding:0; list-style:none; }
+  #info-card .univ{ margin-top:8px; font-weight:600; }
+  #info-close{
+    position:absolute; top:10px; right:14px; background:none; border:none;
+    font-size:26px; line-height:1; color:#666; cursor:pointer;
+  }
+  #info-close:hover{ color:#c81e2c; }
+  #info-ok{
+    margin-top:14px; padding:8px 22px; font-size:14px; background:#2f6fa0;
+    color:#fff; border:none; border-radius:5px; cursor:pointer;
+  }
+  #info-ok:hover{ background:#1c4a70; }
+  @media print{ #info-btn, #info-overlay{ display:none !important; } }
+</style>
+</head>
+<body>
+
+<button id="info-btn" type="button" title="Про програму" aria-label="Про програму">i</button>
+<div id="info-overlay" role="dialog" aria-modal="true" aria-labelledby="info-title">
+  <div id="info-card">
+    <button id="info-close" type="button" aria-label="Закрити">&times;</button>
+    <h3 id="info-title">Про програму</h3>
+    <p><b>Симулятор «Електробезпека в системах електропостачання»</b> — навчальний тренажер для студентів курсу «Охорона праці». На віртуальному лабораторному стенді студент збирає схему, вимірює параметри мережі та аналізує небезпеку ураження електричним струмом.</p>
+
+    <h4>Що можна робити</h4>
+    <ul>
+      <li><b>Модуль 1 · Дія струму та засоби захисту.</b> Вибір системи заземлення (TN-C, TN-S, TN-C-S), вимірювання мультиметром опорів фазних і захисного провідників, ізоляції та заземлювачів, моделювання пробою ізоляції на корпусі приладу, обриву PEN-провідника, дотику людини до пошкодженого приладу з урахуванням опору тіла, взуття та підлоги.</li>
+      <li><b>Модуль 2 · Крокова напруга.</b> Аналіз розтікання струму в ґрунті навколо заземлювача, потенціалу точок ґрунту та небезпеки крокової напруги.</li>
+    </ul>
+
+    <h4>Як працювати</h4>
+    <ul>
+      <li>Вкажіть прізвище, ім'я, по батькові та групу на стартовому екрані.</li>
+      <li>Виконуйте кроки за підказками у лівій колонці.</li>
+      <li>Усі результати дослідів автоматично записуються в таблицю результатів.</li>
+      <li>Після завершення роботи сформуйте звіт для викладача (друк / PDF).</li>
+    </ul>
+
+    <h4>Автори</h4>
+    <ul class="authors">
+      <li>Крайнюк Олена Володимирівна</li>
+      <li>Буц Юрій Васильович</li>
+      <li>Плєхова Ганна Анатоліївна</li>
+    </ul>
+    <p class="univ">Харківський національний автомобільно-дорожній університет</p>
+
+    <div style="text-align:right;"><button id="info-ok" type="button">Закрити</button></div>
+  </div>
+</div>
+
+<div id="start-screen">
+  <div id="start-card">
+    <h2>Лабораторна робота «Електробезпека в системах електропостачання»</h2>
+    <p>Перш ніж почати, вкажи, будь ласка, свої дані — вони потрапляють у звіт для викладача.</p>
+    <label for="student-name">Прізвище, ім'я, по батькові</label>
+    <input type="text" id="student-name" placeholder="напр. Іваненко Іван Іванович">
+    <label for="student-group">Група</label>
+    <input type="text" id="student-group" placeholder="напр. ЕБ-21">
+    <div id="start-error"></div>
+    <button id="start-btn">Почати роботу →</button>
+  </div>
+</div>
+
+<div id="app-content" style="display:none;">
+
+<h1>Лабораторна робота «Електробезпека в системах електропостачання»</h1>
+
+<div id="tabs">
+  <button id="tab-module1" class="tab active">Модуль 1 · Дія струму та засоби захисту</button>
+  <button id="tab-module2" class="tab">Модуль 2 · Крокова напруга</button>
+</div>
+
+<div id="module-1">
+<div class="lab-layout">
+<div class="left-col">
+<div id="hint-box">
+  <div id="hint-step"></div>
+  <div id="hint-text"></div>
+  <div id="hint-buttons">
+    <button id="hint-next" disabled>Далі →</button>
+    <button id="hint-reset">Почати спочатку</button>
+  </div>
+</div>
+
+<div id="mm-box">
+  <div id="mm-title">Мультиметр</div>
+  <div id="mm-modes">
+    <button type="button" class="mm-mode-btn active" data-mode="U">В</button>
+    <button type="button" class="mm-mode-btn" data-mode="R">Ом</button>
+    <button type="button" class="mm-mode-btn" data-mode="I">мА</button>
+  </div>
+  <div id="mm-readout">Клікни по двох клемах (червоних точках) на схемі.</div>
+  <button type="button" id="mm-clear">Скинути щупи</button>
+</div>
+</div>
+
+<div class="frame">
+<svg id="panel" viewBox="0 0 1180 880" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- ================= БІБЛІОТЕКА СИМВОЛІВ ================= -->
+  <defs>
+    <g id="sym-terminal">
+      <circle r="8" class="term"/>
+      <circle r="2.6" fill="#3a0509"/>
+    </g>
+
+    <g id="sym-breaker">
+      <rect x="-18" y="-27" width="36" height="54" rx="3" fill="#f2f2ef" stroke="#555" stroke-width="1.4"/>
+      <rect x="-18" y="-27" width="36" height="11" fill="#2b3236"/>
+      <rect x="-8" y="-3" width="16" height="22" rx="2" fill="var(--yellow)" stroke="#8a6c00" stroke-width="1.2"/>
+    </g>
+
+    <g id="sym-rotary4">
+      <circle r="26" fill="#1c1c1c" stroke="#000" stroke-width="1.2"/>
+      <circle r="21" fill="#2b2b2b"/>
+      <line x1="0" y1="0" x2="0" y2="-18" stroke="#e8e8e8" stroke-width="3.6" stroke-linecap="round"/>
+      <text x="0" y="-32" text-anchor="middle" class="lbl-sm" style="fill:#ddd">1</text>
+      <text x="32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">2</text>
+      <text x="0" y="40" text-anchor="middle" class="lbl-sm" style="fill:#ddd">3</text>
+      <text x="-32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">4</text>
+    </g>
+
+    <g id="sym-resistor">
+      <rect x="-11" y="-27" width="22" height="54" fill="#f7f7f2" stroke="#555" stroke-width="1.3"/>
+    </g>
+
+    <!-- резистор для розміщення на горизонтальному проводі (Rфа/Rфв/Rфс) -->
+    <g id="sym-resistor-h">
+      <rect x="-17" y="-9" width="34" height="18" fill="#f7f7f2" stroke="#555" stroke-width="1.2"/>
+    </g>
+
+    <!-- манекен людини в захисному одязі — з чіткими руками -->
+    <g id="sym-manikin">
+      <circle cx="0" cy="-64" r="12" fill="#f0c090" stroke="#8a5a2a" stroke-width="1.3"/>
+      <path d="M -15 -72 Q 0 -92 15 -72 L 15 -63 L -15 -63 Z" fill="#f2b000" stroke="#c99400" stroke-width="1.1"/>
+      <rect x="-17" y="-52" width="34" height="42" rx="5" fill="#c81e2c"/>
+      <rect x="-17" y="-52" width="34" height="8" fill="#f2b000" opacity=".85"/>
+      <rect x="-17" y="-30" width="34" height="8" fill="#f2b000" opacity=".85"/>
+      <rect x="-30" y="-50" width="12" height="36" rx="6" fill="#28345c"/>
+      <circle cx="-24" cy="-12" r="7" fill="#f0c090" stroke="#8a5a2a" stroke-width="1"/>
+      <rect x="18" y="-50" width="12" height="36" rx="6" fill="#28345c"/>
+      <circle cx="24" cy="-12" r="7" fill="#f0c090" stroke="#8a5a2a" stroke-width="1"/>
+      <rect x="-15" y="-10" width="13" height="38" fill="#28345c"/>
+      <rect x="2" y="-10" width="13" height="38" fill="#28345c"/>
+      <rect x="-17" y="26" width="17" height="8" rx="2" fill="#1c1c1c"/>
+      <rect x="0" y="26" width="17" height="8" rx="2" fill="#1c1c1c"/>
+    </g>
+
+    <g id="sym-lamp">
+      <path id="lamp-bulb" d="M -22 22 L 22 22 L 13 -16 L -13 -16 Z" fill="#1c1c1c"/>
+      <line x1="0" y1="22" x2="0" y2="46" stroke="#555" stroke-width="3.4"/>
+      <circle cx="0" cy="53" r="8" fill="#5a5a5a"/>
+    </g>
+
+    <!-- офісний прилад: принтер -->
+    <g id="sym-printer">
+      <rect x="-46" y="-7" width="92" height="40" rx="3" fill="#e6e6e2" stroke="#555" stroke-width="1.3"/>
+      <rect x="-35" y="-29" width="70" height="24" rx="2" fill="#d2d2ce" stroke="#555" stroke-width="1.1"/>
+      <rect x="-24" y="-36" width="48" height="8" fill="#f6f6f3" stroke="#8a8a86" stroke-width="0.9"/>
+      <circle cx="33" cy="10" r="3.8" fill="#2f8f4e"/>
+      <rect x="-35" y="16" width="26" height="4.5" fill="#f6f6f3" stroke="#999" stroke-width="0.7"/>
+      <rect x="-35" y="24" width="26" height="4.5" fill="#f6f6f3" stroke="#999" stroke-width="0.7"/>
+    </g>
+
+    <!-- офісний прилад: електрообігрівач -->
+    <g id="sym-heater">
+      <rect x="-46" y="-33" width="92" height="58" rx="4" fill="#ececea" stroke="#555" stroke-width="1.3"/>
+      <line x1="-33" y1="-22" x2="-33" y2="14" stroke="#9a9a9a" stroke-width="2.6"/>
+      <line x1="-20" y1="-22" x2="-20" y2="14" stroke="#9a9a9a" stroke-width="2.6"/>
+      <line x1="-7"  y1="-22" x2="-7"  y2="14" stroke="#9a9a9a" stroke-width="2.6"/>
+      <line x1="7"   y1="-22" x2="7"   y2="14" stroke="#9a9a9a" stroke-width="2.6"/>
+      <line x1="20"  y1="-22" x2="20"  y2="14" stroke="#9a9a9a" stroke-width="2.6"/>
+      <line x1="33"  y1="-22" x2="33"  y2="14" stroke="#9a9a9a" stroke-width="2.6"/>
+      <circle cx="0" cy="-20" r="5" fill="#c81e2c"/>
+      <rect x="-46" y="25" width="18" height="8" fill="#8a8a86"/>
+      <rect x="28" y="25" width="18" height="8" fill="#8a8a86"/>
+    </g>
+
+    <g id="sym-meter">
+      <circle r="16" fill="#f4f4f2" stroke="#333" stroke-width="1.6"/>
+    </g>
+
+    <g id="sym-toggle">
+      <rect x="-11" y="-18" width="22" height="36" rx="11" fill="#3a3f42"/>
+      <circle cx="0" cy="-9" r="8" fill="#c9c9c4"/>
+    </g>
+  </defs>
+
+  <!-- ================= ФОН ПАНЕЛІ ================= -->
+  <rect x="0" y="0" width="1180" height="880" fill="var(--panel-bg)"/>
+
+  <!-- ===== верхній тумблер мережі ===== -->
+  <g id="toggle-top" class="ctrl" transform="translate(64,44)">
+    <title>Дублює SA1 — клік вмикає/вимикає мережу.</title>
+    <rect x="-25" y="-30" width="140" height="60" fill="transparent"/>
+    <rect id="track-top" x="-10" y="-16" width="20" height="32" rx="10" fill="#2f8f4e"/>
+    <circle id="knob-top" cx="0" cy="-8" r="8" fill="#f2f2ee" stroke="#333" stroke-width="1.2"/>
+    <text x="22" y="-14" class="lbl-sm">МЕРЕЖА</text>
+    <text x="22" y="4" class="lbl-sm">Увімк.</text>
+    <text x="22" y="24" class="lbl-sm">Вимк.</text>
+  </g>
+
+
+  <!-- ===== шини A / B / C / N / PE ===== -->
+  <g id="busbars" transform="translate(0,130)">
+    <line x1="120" y1="0"  x2="1120" y2="0"  stroke="var(--bus-a)" stroke-width="4"/>
+    <line x1="120" y1="22" x2="1120" y2="22" stroke="var(--bus-b)" stroke-width="4"/>
+    <line x1="120" y1="44" x2="1120" y2="44" stroke="var(--bus-c)" stroke-width="4"/>
+    <line x1="70"  y1="68" x2="1120" y2="68" stroke="var(--bus-n)" stroke-width="4"/>
+    <line x1="40"  y1="90" x2="1120" y2="90" stroke="var(--bus-pe)" stroke-width="4" stroke-dasharray="12 5"/>
+    <text x="1128" y="6"  class="lbl-bus">A</text>
+    <text x="1128" y="28" class="lbl-bus">B</text>
+    <text x="1128" y="50" class="lbl-bus">C</text>
+    <text x="1128" y="74" class="lbl-bus">N</text>
+    <text x="1128" y="96" class="lbl-bus">PE</text>
+  </g>
+
+  <!-- ===== SA2 + Rфа/Rфв/Rфс (лівий верх) ===== -->
+  <g transform="translate(120,160)">
+    <text x="0" y="-62" class="lbl-sm">SA2</text>
+    <rect x="-32" y="-44" width="64" height="76" fill="none" stroke="#555" stroke-width="1.2"/>
+    <line x1="32" y1="-30" x2="53" y2="-30" stroke="#555" stroke-width="1.2"/>
+    <line x1="32" y1="-8"  x2="53" y2="-8"  stroke="#555" stroke-width="1.2"/>
+    <line x1="32" y1="14"  x2="53" y2="14"  stroke="#555" stroke-width="1.2"/>
+  </g>
+
+  <g>
+    <title>Rфа — опір фазного провідника A (умовний, вимірюється мультиметром через X7/X8).</title>
+    <use href="#sym-resistor-h" transform="translate(190,130)"/>
+    <text x="190" y="133" text-anchor="middle" style="font-size:9px;fill:#1c1c1c;font-weight:700">Rфа</text>
+  </g>
+  <g>
+    <title>Rфв — опір фазного провідника B.</title>
+    <use href="#sym-resistor-h" transform="translate(190,152)"/>
+    <text x="190" y="155" text-anchor="middle" style="font-size:9px;fill:#1c1c1c;font-weight:700">Rфв</text>
+  </g>
+  <g>
+    <title>Rфс — опір фазного провідника C.</title>
+    <use href="#sym-resistor-h" transform="translate(190,174)"/>
+    <text x="190" y="177" text-anchor="middle" style="font-size:9px;fill:#1c1c1c;font-weight:700">Rфс</text>
+  </g>
+
+  <g>
+    <title>Rpe — опір захисного провідника PE (умовний, вимірюється мультиметром через клеми X1/X2, перемикач SW3).</title>
+    <use href="#sym-resistor-h" transform="translate(110,220)"/>
+    <text x="110" y="223" text-anchor="middle" style="font-size:9px;fill:#1c1c1c;font-weight:700">Rpe</text>
+  </g>
+
+  <g>
+    <use href="#sym-terminal" x="40"  y="216" id="X1"/>
+    <use href="#sym-terminal" x="66"  y="216" id="X2"/>
+    <use href="#sym-terminal" x="270" y="130" id="X7"/>
+    <use href="#sym-terminal" x="300" y="130" id="X8"/>
+    <use href="#sym-terminal" x="810" y="130" id="X19"/>
+    <use href="#sym-terminal" x="1060" y="130" id="X29"/>
+    <use href="#sym-terminal" x="810" y="216" id="X20"/>
+    <use href="#sym-terminal" x="960" y="216" id="X32"/>
+  </g>
+
+  <circle cx="330" cy="198" r="7" fill="var(--bus-n)"/>
+  <circle cx="900" cy="198" r="7" fill="var(--bus-n)"/>
+  <circle cx="990" cy="198" r="7" fill="var(--bus-n)"/>
+
+  <!-- ===== провідники гілки лампи ===== -->
+  <path d="M150,130 V300 H100 V318" stroke="#333" stroke-width="2.4" fill="none"/>
+  <path d="M200,318 V345" stroke="#333" stroke-width="2.4" fill="none"/>
+  <circle cx="200" cy="345" r="4" fill="#333"/>
+  <path d="M200,345 V400 H90 V354" stroke="#333" stroke-width="2.4" fill="none"/>
+  <path d="M90,542 V570" stroke="#333" stroke-width="2.4" fill="none"/>
+
+  <!-- ===== Rн1, QF2, лампа (лівий блок) ===== -->
+  <circle cx="260" cy="198" r="7" fill="var(--bus-n)" id="X9"/>
+  <path d="M260,198 V309" stroke="#333" stroke-width="2.4" fill="none"/>
+  <path d="M260,363 V396" stroke="#333" stroke-width="2.4" fill="none"/>
+  <path d="M200,345 V396 H260" stroke="#333" stroke-width="2.4" fill="none"/>
+  <g transform="translate(260,400)">
+    <title>Rн1 — умовний опір навантаження лампи. Показує внутрішній опір приладу; в поточній версії лампа світиться просто за наявністю живлення, без урахування цього значення.</title>
+    <text x="0" y="-96" class="lbl-sm">Rн1</text>
+    <use href="#sym-resistor" transform="translate(0,-64)"/>
+    <use href="#sym-terminal" x="0" y="-4" id="X11"/>
+  </g>
+
+  <g id="ctrl-QF2" class="ctrl" transform="translate(150,318)">
+    <title>Автоматичний вимикач — захищає гілку від перевантаження й короткого замикання. Клік вмикає/вимикає вручну.</title>
+    <text x="0" y="-42" class="lbl-sm">QF2</text>
+    <line x1="-50" y1="0" x2="-27" y2="0" stroke="#333" stroke-width="2.4"/>
+    <line x1="27" y1="0" x2="50" y2="0" stroke="#333" stroke-width="2.4"/>
+    <use href="#sym-breaker" transform="rotate(90)"/>
+    <circle id="led-QF2" class="led" cx="0" cy="42" r="6" fill="#2f8f4e"/>
+    <use href="#sym-terminal" x="-50" y="0" id="X3"/>
+    <use href="#sym-terminal" x="50" y="0" id="X6"/>
+  </g>
+
+  <g id="dev-lamp" class="ctrl" transform="translate(90,450)">
+    <title>Клік — змоделювати пробій ізоляції: фаза торкається металевого корпусу лампи (аварія).</title>
+    <use href="#sym-lamp"/>
+    <text id="warn-lamp" x="26" y="-8" class="lbl-sm" style="fill:#f2c200" opacity="0">⚠︎</text>
+    <use href="#sym-terminal" x="0" y="-96" id="X10"/>
+    <text x="0" y="78" text-anchor="middle" class="lbl-sm">лампа</text>
+    <use href="#sym-terminal" x="20" y="94" id="X12"/>
+  </g>
+
+
+  <path d="M40,453 V220" stroke="#333" stroke-width="2.4" fill="none"/>
+
+  <g transform="translate(40,480)">
+    <title>R3 — опір заземлювача робочого нуля джерела. Використовується в розрахунках TN-системи як фіксоване типове значення (не є окремим регульованим елементом у цій версії).</title>
+    <text x="-6" y="-46" class="lbl-sm" text-anchor="middle">R3</text>
+    <use href="#sym-resistor"/>
+    <use href="#sym-terminal" x="0" y="76" id="X4"/>
+  </g>
+  <path d="M40,556 V570 H60" stroke="#333" stroke-width="2.4" fill="none"/>
+
+  <!-- ===== Rпідл, SW6, SW7, SW8, манекен (центр) ===== -->
+  <g transform="translate(480,360)">
+
+    <text x="10" y="-84" text-anchor="middle" class="lbl-sm">SW6</text>
+    <text x="10" y="-68" text-anchor="middle" class="lbl-sm">Rл</text>
+    <g id="ctrl-SW6" class="ctrl" transform="translate(10,-22)">
+      <title>SW6 — обирає умовний опір тіла людини (Ом). Клік перемикає позицію 1→2→3→4.</title>
+      <circle r="26" fill="#1c1c1c" stroke="#000" stroke-width="1.2"/>
+      <circle r="21" fill="#2b2b2b"/>
+      <g id="ptr-SW6"><line x1="0" y1="0" x2="0" y2="-18" stroke="#e8e8e8" stroke-width="3.6" stroke-linecap="round"/></g>
+      <text x="0" y="-32" text-anchor="middle" class="lbl-sm" style="fill:#ddd">1</text>
+      <text x="32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">2</text>
+      <text x="0" y="40" text-anchor="middle" class="lbl-sm" style="fill:#ddd">3</text>
+      <text x="-32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">4</text>
+    </g>
+    <text id="val-SW6" x="10" y="20" text-anchor="middle" class="lbl-sm">1000 Ом</text>
+
+    <text x="130" y="-84" text-anchor="middle" class="lbl-sm">SW7</text>
+    <text x="130" y="-68" text-anchor="middle" class="lbl-sm">Rпідошви</text>
+    <g id="ctrl-SW7" class="ctrl" transform="translate(130,-22)">
+      <title>SW7 — обирає опір взуття (Ом): від "без взуття" (0 Ом) до добре ізольованого. Клік перемикає позицію.</title>
+      <circle r="26" fill="#1c1c1c" stroke="#000" stroke-width="1.2"/>
+      <circle r="21" fill="#2b2b2b"/>
+      <g id="ptr-SW7"><line x1="0" y1="0" x2="0" y2="-18" stroke="#e8e8e8" stroke-width="3.6" stroke-linecap="round"/></g>
+      <text x="0" y="-32" text-anchor="middle" class="lbl-sm" style="fill:#ddd">1</text>
+      <text x="32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">2</text>
+      <text x="0" y="40" text-anchor="middle" class="lbl-sm" style="fill:#ddd">3</text>
+      <text x="-32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">4</text>
+    </g>
+    <text id="val-SW7" x="130" y="20" text-anchor="middle" class="lbl-sm">суха, 0 Ом</text>
+
+    <text x="40" y="52" text-anchor="middle" class="lbl-sm">SW8</text>
+    <text x="40" y="68" text-anchor="middle" class="lbl-sm">Rпідл</text>
+    <g id="ctrl-SW8" class="ctrl" transform="translate(40,110)">
+      <title>SW8 — обирає умовний опір підлоги (Ом): суха дерев'яна → бетон → кахель → волога/струмопровідна. Клік перемикає позицію.</title>
+      <circle r="26" fill="#1c1c1c" stroke="#000" stroke-width="1.2"/>
+      <circle r="21" fill="#2b2b2b"/>
+      <g id="ptr-SW8"><line x1="0" y1="0" x2="0" y2="-18" stroke="#e8e8e8" stroke-width="3.6" stroke-linecap="round"/></g>
+      <text x="0" y="-32" text-anchor="middle" class="lbl-sm" style="fill:#ddd">1</text>
+      <text x="32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">2</text>
+      <text x="0" y="40" text-anchor="middle" class="lbl-sm" style="fill:#ddd">3</text>
+      <text x="-32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">4</text>
+    </g>
+    <text id="val-SW8" x="40" y="168" text-anchor="middle" class="lbl-sm">1000 Ом</text>
+
+    <g id="ctrl-manikin" class="ctrl" transform="translate(-60,130)">
+      <title>Клік — людина торкається голою рукою корпусу приладу, на якому є пробій ізоляції.</title>
+      <circle id="danger-ring" r="40" fill="none" stroke="#8a2020" stroke-width="4" opacity="0"/>
+      <use href="#sym-manikin"/>
+      <text id="touch-label" x="0" y="-80" text-anchor="middle" class="lbl-sm" style="fill:#1c4a70" opacity="0">✋ торкається корпусу</text>
+    </g>
+    <use href="#sym-terminal" x="-85" y="118" id="X16"/>
+    <use href="#sym-terminal" x="-52" y="159" id="X17"/>
+    <text x="-60" y="180" text-anchor="middle" class="lbl-sm" style="font-size:11px">клік на манекена —</text>
+    <text x="-60" y="192" text-anchor="middle" class="lbl-sm" style="font-size:11px">торкнутись</text>
+    <text x="-60" y="204" text-anchor="middle" class="lbl-sm" style="font-size:11px">корпусу</text>
+  </g>
+
+
+  <!-- ===== система заземлення та аварійні режими ===== -->
+  <g transform="translate(400,42)">
+    <text x="0" y="-14" class="lbl-sm">Система заземлення:</text>
+    <g id="gs-TN-C" class="ctrl gs-btn" transform="translate(0,0)">
+      <title>TN-C — нейтраль (N) і захисний провідник (PE) об'єднані в один PEN-провідник по всій мережі. Просто й дешево, але при обриві PEN корпус приладу може опинитися під небезпечною напругою.</title>
+      <rect width="76" height="28" rx="3" fill="#e6e6e2" stroke="#555" stroke-width="1.4"/>
+      <text x="38" y="19" text-anchor="middle" class="lbl-sm">TN-C</text>
+    </g>
+    <g id="gs-TN-S" class="ctrl gs-btn" transform="translate(84,0)">
+      <title>TN-S — нейтраль (N) і захисний провідник (PE) прокладені окремими провідниками по всій мережі. Найнадійніший варіант: при пробої ізоляції автомат спрацьовує майже миттєво.</title>
+      <rect width="76" height="28" rx="3" fill="#e6e6e2" stroke="#555" stroke-width="1.4"/>
+      <text x="38" y="19" text-anchor="middle" class="lbl-sm">TN-S</text>
+    </g>
+    <g id="gs-TN-C-S" class="ctrl gs-btn" transform="translate(168,0)">
+      <title>TN-C-S — частина мережі (від підстанції) має спільний PEN, як у TN-C, а далі до споживача N і PE розділяються, як у TN-S. Компроміс між вартістю і надійністю.</title>
+      <rect width="86" height="28" rx="3" fill="#e6e6e2" stroke="#555" stroke-width="1.4"/>
+      <text x="43" y="19" text-anchor="middle" class="lbl-sm">TN-C-S</text>
+    </g>
+    <g id="ctrl-pen" class="ctrl" transform="translate(270,0)">
+      <title>Імітує аварію: обрив спільного провідника PEN. Небезпечно лише для TN-C — там немає окремого PE, тому при обриві корпус приладу лишається під напругою без захисту.</title>
+      <rect width="120" height="28" rx="3" fill="#e6e6e2" stroke="#555" stroke-width="1.4"/>
+      <text x="60" y="19" text-anchor="middle" class="lbl-sm">Обрив PEN</text>
+    </g>
+  </g>
+
+  <!-- ===== Rн2, QF3, принтер ===== -->
+  <circle cx="760" cy="198" r="7" fill="var(--bus-n)" id="X25"/>
+  <path d="M760,198 V309" stroke="#333" stroke-width="2.4" fill="none"/>
+  <path d="M760,363 V396" stroke="#333" stroke-width="2.4" fill="none"/>
+  <g transform="translate(760,400)">
+    <title>Rн2 — умовний опір навантаження принтера. Показує внутрішній опір приладу (ілюстративний елемент).</title>
+    <text x="0" y="-96" class="lbl-sm">Rн2</text>
+    <use href="#sym-resistor" transform="translate(0,-64)"/>
+    <use href="#sym-terminal" x="0" y="-4" id="X26"/>
+  </g>
+
+  <!-- ===== провідники гілки принтера ===== -->
+  <path d="M690,130 V300 H640 V318" stroke="#333" stroke-width="2.4" fill="none"/>
+  <path d="M740,318 V345" stroke="#333" stroke-width="2.4" fill="none"/>
+  <circle cx="740" cy="345" r="4" fill="#333"/>
+  <path d="M740,345 V400 H830 V378" stroke="#333" stroke-width="2.4" fill="none"/>
+  <path d="M740,345 V396 H760" stroke="#333" stroke-width="2.4" fill="none"/>
+  <path d="M830,502 V570" stroke="#333" stroke-width="2.4" fill="none"/>
+
+  <g id="ctrl-QF3" class="ctrl" transform="translate(690,318)">
+    <title>Автоматичний вимикач — захищає гілку принтера. Клік вмикає/вимикає вручну.</title>
+    <text x="0" y="-42" class="lbl-sm">QF3</text>
+    <line x1="-50" y1="0" x2="-27" y2="0" stroke="#333" stroke-width="2.4"/>
+    <line x1="27" y1="0" x2="50" y2="0" stroke="#333" stroke-width="2.4"/>
+    <use href="#sym-breaker" transform="rotate(90)"/>
+    <circle id="led-QF3" class="led" cx="0" cy="42" r="6" fill="#2f8f4e"/>
+    <use href="#sym-terminal" x="-50" y="0" id="X21"/>
+    <use href="#sym-terminal" x="50" y="0" id="X22"/>
+  </g>
+
+  <g id="dev-printer" class="ctrl" transform="translate(830,440)">
+    <title>Клік — змоделювати пробій ізоляції на корпусі принтера (аварія).</title>
+    <use href="#sym-printer"/>
+    <text id="warn-printer" x="40" y="-24" class="lbl-sm" style="fill:#f2c200" opacity="0">⚠︎</text>
+    <use href="#sym-terminal" x="0" y="-62" id="X23"/>
+    <use href="#sym-terminal" x="50" y="64" id="X24"/>
+    <text x="0" y="78" text-anchor="middle" class="lbl-sm">принтер</text>
+  </g>
+
+  <!-- ===== Rн3, QF4, обігрівач ===== -->
+  <circle cx="1030" cy="198" r="7" fill="var(--bus-n)" id="X31"/>
+  <path d="M1030,198 V309" stroke="#333" stroke-width="2.4" fill="none"/>
+  <path d="M1030,363 V396" stroke="#333" stroke-width="2.4" fill="none"/>
+  <g transform="translate(1030,400)">
+    <title>Rн3 — умовний опір навантаження обігрівача. Показує внутрішній опір приладу (ілюстративний елемент).</title>
+    <text x="0" y="-96" class="lbl-sm">Rн3</text>
+    <use href="#sym-resistor" transform="translate(0,-64)"/>
+    <use href="#sym-terminal" x="0" y="-4" id="X27"/>
+  </g>
+
+  <!-- ===== провідники гілки обігрівача ===== -->
+  <path d="M960,130 V300 H910 V318" stroke="#333" stroke-width="2.4" fill="none"/>
+  <path d="M1010,318 V345" stroke="#333" stroke-width="2.4" fill="none"/>
+  <circle cx="1010" cy="345" r="4" fill="#333"/>
+  <path d="M1010,345 V410 H1100 V366" stroke="#333" stroke-width="2.4" fill="none"/>
+  <path d="M1010,345 V396 H1030" stroke="#333" stroke-width="2.4" fill="none"/>
+  <path d="M1100,514 V570" stroke="#333" stroke-width="2.4" fill="none"/>
+
+  <g id="ctrl-QF4" class="ctrl" transform="translate(960,318)">
+    <title>Автоматичний вимикач — захищає гілку обігрівача. Клік вмикає/вимикає вручну.</title>
+    <text x="0" y="-42" class="lbl-sm">QF4</text>
+    <line x1="-50" y1="0" x2="-27" y2="0" stroke="#333" stroke-width="2.4"/>
+    <line x1="27" y1="0" x2="50" y2="0" stroke="#333" stroke-width="2.4"/>
+    <use href="#sym-breaker" transform="rotate(90)"/>
+    <circle id="led-QF4" class="led" cx="0" cy="42" r="6" fill="#2f8f4e"/>
+    <use href="#sym-terminal" x="-50" y="0" id="X30"/>
+    <use href="#sym-terminal" x="50" y="0" id="X33"/>
+  </g>
+
+  <g id="dev-heater" class="ctrl" transform="translate(1100,440)">
+    <title>Клік — змоделювати пробій ізоляції на корпусі обігрівача (аварія).</title>
+    <use href="#sym-heater"/>
+    <text id="warn-heater" x="40" y="-28" class="lbl-sm" style="fill:#f2c200" opacity="0">⚠︎</text>
+    <use href="#sym-terminal" x="0" y="-74" id="X34"/>
+    <use href="#sym-terminal" x="44" y="74" id="X35"/>
+    <text x="0" y="78" text-anchor="middle" class="lbl-sm">обігрівач</text>
+  </g>
+
+  <!-- ===== рейка вздовж низу верхньої частини ===== -->
+  <line x1="40" y1="570" x2="1140" y2="570" class="rail"/>
+  <g>
+    <use href="#sym-terminal" x="60"  y="570" id="X5"/>
+    <use href="#sym-terminal" x="330" y="570" id="X13"/>
+    <use href="#sym-terminal" x="410" y="570" id="X15"/>
+    <use href="#sym-terminal" x="610" y="570" id="X18"/>
+    <use href="#sym-terminal" x="830" y="570" id="X28"/>
+    <use href="#sym-terminal" x="1120" y="570" id="X36"/>
+  </g>
+
+  <!-- ===== нижній ряд обертових перемикачів SW1-SW5 (точки вимірювання мультиметром) ===== -->
+  <g transform="translate(0,628)">
+    <g transform="translate(100,0)">
+      <g id="ctrl-SW1" class="ctrl">
+        <title>SW1 — обирає точку вимірювання опору фазних провідників (Rфа/Rфв/Rфс) мультиметром. Клік перемикає позицію 1→2→3.</title>
+        <circle r="26" fill="#1c1c1c" stroke="#000" stroke-width="1.2"/>
+        <circle r="21" fill="#2b2b2b"/>
+        <g id="ptr-SW1"><line x1="0" y1="0" x2="0" y2="-18" stroke="#e8e8e8" stroke-width="3.6" stroke-linecap="round"/></g>
+        <text x="0" y="-32" text-anchor="middle" class="lbl-sm" style="fill:#ddd">1</text>
+        <text x="32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">2</text>
+        <text x="0" y="40" text-anchor="middle" class="lbl-sm" style="fill:#ddd">3</text>
+      </g>
+      <text x="0" y="46" text-anchor="middle" class="lbl-sm">SW1</text>
+      <text x="0" y="64" text-anchor="middle" class="lbl-sm">Rфа/Rфв/Rфс</text>
+      <text id="val-SW1" x="0" y="82" text-anchor="middle" class="lbl-sm" style="font-size:11px">Rфа = 0,08 Ом</text>
+    </g>
+    <g transform="translate(280,0)">
+      <g id="ctrl-SW2" class="ctrl">
+        <title>SW2 — обирає точку вимірювання опору ізоляції мультиметром. Клік перемикає позицію 1→2 (справна / пошкоджена).</title>
+        <circle r="26" fill="#1c1c1c" stroke="#000" stroke-width="1.2"/>
+        <circle r="21" fill="#2b2b2b"/>
+        <g id="ptr-SW2"><line x1="0" y1="0" x2="0" y2="-18" stroke="#e8e8e8" stroke-width="3.6" stroke-linecap="round"/></g>
+        <text x="0" y="-32" text-anchor="middle" class="lbl-sm" style="fill:#ddd">1</text>
+        <text x="32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">2</text>
+      </g>
+      <text x="0" y="46" text-anchor="middle" class="lbl-sm">SW2</text>
+      <text x="0" y="64" text-anchor="middle" class="lbl-sm">Rізоляції</text>
+      <text id="val-SW2" x="0" y="82" text-anchor="middle" class="lbl-sm" style="font-size:11px">справна: &gt; 5 МОм</text>
+    </g>
+    <g transform="translate(460,0)">
+      <g id="ctrl-SW3" class="ctrl">
+        <title>SW3 — обирає точку вимірювання опору PE-провідника мультиметром. Клік перемикає позицію 1→2 (справний / обрив).</title>
+        <circle r="26" fill="#1c1c1c" stroke="#000" stroke-width="1.2"/>
+        <circle r="21" fill="#2b2b2b"/>
+        <g id="ptr-SW3"><line x1="0" y1="0" x2="0" y2="-18" stroke="#e8e8e8" stroke-width="3.6" stroke-linecap="round"/></g>
+        <text x="0" y="-32" text-anchor="middle" class="lbl-sm" style="fill:#ddd">1</text>
+        <text x="32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">2</text>
+      </g>
+      <text x="0" y="46" text-anchor="middle" class="lbl-sm">SW3</text>
+      <text x="0" y="64" text-anchor="middle" class="lbl-sm">Rpe</text>
+      <text id="val-SW3" x="0" y="82" text-anchor="middle" class="lbl-sm" style="font-size:11px">Rpe справний: 0,10 Ом</text>
+    </g>
+    <g transform="translate(640,0)">
+      <g id="ctrl-SW4" class="ctrl">
+        <title>SW4 — обирає точку вимірювання опору повторного заземлення мультиметром. Клік перемикає позицію 1→2 (у нормі / вище норми).</title>
+        <circle r="26" fill="#1c1c1c" stroke="#000" stroke-width="1.2"/>
+        <circle r="21" fill="#2b2b2b"/>
+        <g id="ptr-SW4"><line x1="0" y1="0" x2="0" y2="-18" stroke="#e8e8e8" stroke-width="3.6" stroke-linecap="round"/></g>
+        <text x="0" y="-32" text-anchor="middle" class="lbl-sm" style="fill:#ddd">1</text>
+        <text x="32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">2</text>
+      </g>
+      <text x="0" y="46" text-anchor="middle" class="lbl-sm">SW4</text>
+      <text x="0" y="64" text-anchor="middle" class="lbl-sm">Rповт.з.</text>
+      <text id="val-SW4" x="0" y="82" text-anchor="middle" class="lbl-sm" style="font-size:11px">у нормі: 4 Ом</text>
+    </g>
+    <g transform="translate(820,0)">
+      <g id="ctrl-SW5" class="ctrl">
+        <title>SW5 — обирає точку вимірювання опору заземлювача R3 мультиметром. Клік перемикає позицію 1→2 (у нормі / вище норми).</title>
+        <circle r="26" fill="#1c1c1c" stroke="#000" stroke-width="1.2"/>
+        <circle r="21" fill="#2b2b2b"/>
+        <g id="ptr-SW5"><line x1="0" y1="0" x2="0" y2="-18" stroke="#e8e8e8" stroke-width="3.6" stroke-linecap="round"/></g>
+        <text x="0" y="-32" text-anchor="middle" class="lbl-sm" style="fill:#ddd">1</text>
+        <text x="32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">2</text>
+      </g>
+      <text x="0" y="46" text-anchor="middle" class="lbl-sm">SW5</text>
+      <text x="0" y="64" text-anchor="middle" class="lbl-sm">R3</text>
+      <text id="val-SW5" x="0" y="82" text-anchor="middle" class="lbl-sm" style="font-size:11px">у нормі: 4 Ом</text>
+    </g>
+  </g>
+
+  <!-- ===== нижні модулі ===== -->
+  <g transform="translate(40,740)">
+    <rect x="0" y="0" width="240" height="86" fill="none" stroke="#555" stroke-width="1.2"/>
+    <text x="10" y="16" class="lbl-sm">Живлення</text>
+
+    <text x="44" y="38" text-anchor="middle" class="lbl-sm">QF1</text>
+    <g id="ctrl-QF1" class="ctrl" transform="translate(44,64) scale(.6)">
+      <title>QF1 — головний вхідний автомат. Без нього жоден прилад не отримає живлення.</title>
+      <rect x="-30" y="-40" width="60" height="80" fill="transparent"/>
+      <use href="#sym-breaker"/>
+      <circle id="led-QF1" class="led" cx="0" cy="42" r="8" fill="#2f8f4e"/>
+    </g>
+
+    <text x="130" y="38" text-anchor="middle" class="lbl-sm">HL1</text>
+    <circle id="led-HL1" cx="130" cy="64" r="6" fill="#2f8f4e"/>
+
+    <text x="200" y="38" text-anchor="middle" class="lbl-sm">SA1</text>
+    <g id="ctrl-SA1" class="ctrl" transform="translate(200,64) scale(.8)">
+      <title>SA1 — головний вимикач мережі. Клік вмикає/вимикає всю панель.</title>
+      <rect x="-25" y="-30" width="50" height="60" fill="transparent"/>
+      <rect id="track-SA1" x="-10" y="-16" width="20" height="32" rx="10" fill="#2f8f4e"/>
+      <circle id="knob-SA1" cx="0" cy="-8" r="8" fill="#f2f2ee" stroke="#333" stroke-width="1.2"/>
+    </g>
+  </g>
+
+
+
+
+  <g transform="translate(320,740)">
+    <rect x="0" y="0" width="220" height="56" fill="none" stroke="#555" stroke-width="1.2"/>
+    <text x="10" y="20" class="lbl-sm">Аварія</text>
+    <use href="#sym-terminal" x="34" y="38" id="X37"/>
+    <text x="70" y="42" class="lbl-sm">SB1</text>
+    <g id="ctrl-SB1" class="ctrl" transform="translate(84,38)">
+      <title>SB1 — кнопка аварійного відключення («грибок»). Клік миттєво знеструмлює всю панель (як SA1 у положенні "Вимк."), незалежно від того, що відбувається в мережі.</title>
+      <rect x="-14" y="-14" width="28" height="28" rx="14" fill="#c81e2c" stroke="#7a0f18" stroke-width="1.4"/>
+      <circle r="6" fill="#7a0f18"/>
+    </g>
+    <use href="#sym-terminal" x="100" y="38" id="X38"/>
+  </g>
+
+  <g transform="translate(580,740)">
+    <rect x="0" y="0" width="220" height="56" fill="none" stroke="#555" stroke-width="1.2"/>
+    <title>SW9 — резервний перемикач точки вимірювання (запасний канал мультиметра на реальному стенді). У цій роботі не задіяний.</title>
+    <use href="#sym-terminal" x="24" y="24" id="X39"/>
+    <use href="#sym-resistor" transform="translate(66,24) scale(.7)"/>
+    <use href="#sym-terminal" x="110" y="24" id="X40"/>
+    <text x="160" y="28" class="lbl-sm">SW9</text>
+  </g>
+
+  <g transform="translate(840,740)">
+    <rect x="0" y="0" width="360" height="56" fill="none" stroke="#555" stroke-width="1.2"/>
+    <text x="10" y="20" class="lbl-sm">Цифрові прилади</text>
+    <use href="#sym-terminal" x="34" y="38" id="X41"/>
+    <g>
+      <title>Амперметр A — клеми X41/X42. На реальному стенді сюди підключають щуп для вимірювання струму; показання відповідають полю "Струм через людину" в цифровому табло нижче.</title>
+      <use href="#sym-meter" transform="translate(68,38)"/>
+      <text x="68" y="43" class="lbl-sm" text-anchor="middle">A</text>
+    </g>
+    <use href="#sym-terminal" x="100" y="38" id="X42"/>
+
+    <use href="#sym-terminal" x="170" y="38" id="X43"/>
+    <g>
+      <title>Вольтметр V — клеми X43/X44. Показання відповідають полю "Напруга дотику" в цифровому табло нижче.</title>
+      <use href="#sym-meter" transform="translate(204,38)"/>
+      <text x="204" y="43" class="lbl-sm" text-anchor="middle">V</text>
+    </g>
+    <use href="#sym-terminal" x="236" y="38" id="X44"/>
+
+    <text x="300" y="24" class="lbl-sm">SB2</text>
+    <g transform="translate(320,40) scale(.6)">
+      <title>SB2 — кнопка скидання показань цифрових приладів (на реальному стенді). У цій версії табло оновлюється автоматично при кожній дії, окремого скидання не потребує.</title>
+      <rect x="-10" y="-16" width="20" height="32" rx="10" fill="#3a3f42"/>
+      <circle cx="0" cy="-8" r="8" fill="#c9c9c4"/>
+    </g>
+  </g>
+
+  <g transform="translate(760,806)">
+    <rect x="0" y="0" width="420" height="60" rx="3" fill="#0f1a12" stroke="#333" stroke-width="1.2"/>
+    <text id="readout-A" x="12" y="17" class="lbl-sm" style="fill:#4ef07a">Струм через людину: 0 мА</text>
+    <text id="readout-V" x="12" y="34" class="lbl-sm" style="fill:#4ef07a">Напруга дотику: 0 В</text>
+    <text id="readout-effect" x="12" y="51" class="lbl-sm" style="fill:#4ef07a; font-size:13px">Дія струму: —</text>
+  </g>
+
+</svg>
+</div>
+</div>
+
+<div id="legend">
+  <b>Легенда позначень — Модуль 1:</b>
+  SA — вимикач мережі (рубильник) &nbsp;·&nbsp;
+  QF — автоматичний вимикач / автомат (захищає окрему гілку від перевантаження й КЗ) &nbsp;·&nbsp;
+  HL — сигнальна лампа-індикатор &nbsp;·&nbsp;
+  Rн1 / Rн2 / Rн3 — умовне навантаження лампи / принтера / обігрівача &nbsp;·&nbsp;
+  R3 — опір заземлювача робочого нуля (природний/додатковий) &nbsp;·&nbsp;
+  Rл — умовний опір тіла людини (перемикач SW6) &nbsp;·&nbsp;
+  Rвзуття — умовний опір взуття (перемикач SW7) &nbsp;·&nbsp;
+  Rпідл — умовний опір підлоги (перемикач SW8) &nbsp;·&nbsp;
+  N — робочий нуль &nbsp;·&nbsp;
+  PE — захисний провідник &nbsp;·&nbsp;
+  PEN — суміщений (нейтраль + захисний) провідник
+  <br><br>
+  <b>Червоні й чорні крапки (X1–X44):</b> це умовні клеми — точки, де на реальному стенді підключають щуп мультиметра або перемичку для вимірювання. Червона крапка з номером — гніздо для підключення; чорна крапка без гнізда (наприклад на лінії N) — просто вузол з'єднання проводів, не призначений для підключення щупа.
+  <br><br>
+  <i>SW1–SW5 (нижній ряд) — перемикачі точок вимірювання мультиметром: SW1 обирає фазу (Rфа/Rфв/Rфс), SW2 — опір ізоляції, SW3 — опір PE, SW4 — опір повторного заземлення, SW5 — опір заземлювача R3. Клацай по перемикачу, щоб змінити позицію — під ним з'явиться умовне показання мультиметра для цієї точки.</i>
+</div>
+
+</div>
+
+<div id="module-2" style="display:none;">
+
+<div class="lab-layout">
+<div id="hint-box2">
+  <div id="hint-step2">Крокова напруга</div>
+  <div id="hint-text2">Обери струм замикання на землю (Iз) і опір заземлювача (Rз), потім клікай по лінії ліворуч і праворуч від заземлювача, щоб поставити дві "ноги" людини на різній відстані. Подивись, яка напруга кроку і струм через людину виходять.</div>
+</div>
+
+<div class="frame">
+<svg id="step-panel" viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg">
+
+  <rect x="0" y="0" width="1000" height="620" fill="var(--panel-bg)"/>
+
+  <text x="20" y="34" class="lbl">Вигляд згори: заземлювач і розподіл потенціалу по поверхні ґрунту</text>
+
+  <!-- еквіпотенціальні кола -->
+  <g transform="translate(150,340)">
+    <circle r="250" fill="none" stroke="#9a9a86" stroke-width="1.4" stroke-dasharray="6 5"/>
+    <circle r="200" fill="none" stroke="#9a9a86" stroke-width="1.4" stroke-dasharray="6 5"/>
+    <circle r="150" fill="none" stroke="#9a9a86" stroke-width="1.4" stroke-dasharray="6 5"/>
+    <circle r="100" fill="none" stroke="#9a9a86" stroke-width="1.4" stroke-dasharray="6 5"/>
+    <circle r="50"  fill="none" stroke="#9a9a86" stroke-width="1.4" stroke-dasharray="6 5"/>
+    <text x="8"   y="-56"  class="lbl-sm" fill="#6a6a5e">1 м</text>
+    <text x="8"   y="-106" class="lbl-sm" fill="#6a6a5e">2 м</text>
+    <text x="8"   y="-156" class="lbl-sm" fill="#6a6a5e">3 м</text>
+    <text x="8"   y="-206" class="lbl-sm" fill="#6a6a5e">4 м</text>
+    <text x="8"   y="-256" class="lbl-sm" fill="#6a6a5e">5 м</text>
+
+    <!-- заземлювач -->
+    <rect x="-10" y="-24" width="20" height="48" fill="#5a5a5a" stroke="#333" stroke-width="1.4"/>
+    <text x="0" y="42" text-anchor="middle" class="lbl-sm">заземлювач</text>
+  </g>
+
+  <!-- клікабельна вісь для розміщення ніг -->
+  <rect id="step-axis" x="150" y="330" width="300" height="20" fill="#000" opacity="0" style="cursor:pointer;"/>
+  <line x1="150" y1="340" x2="450" y2="340" stroke="#333" stroke-width="1.5"/>
+
+  <g id="foot1-marker" transform="translate(150,340)" opacity="0">
+    <circle r="9" fill="#2f6fa0" stroke="#1c4a70" stroke-width="1.4"/>
+    <text x="0" y="-16" text-anchor="middle" class="lbl-sm">нога 1</text>
+  </g>
+  <g id="foot2-marker" transform="translate(150,340)" opacity="0">
+    <circle r="9" fill="#c81e2c" stroke="#7a0e17" stroke-width="1.4"/>
+    <text x="0" y="-16" text-anchor="middle" class="lbl-sm">нога 2</text>
+  </g>
+
+  <!-- перемикачі Iз та Rз -->
+  <g transform="translate(600,120)">
+    <text x="0" y="-38" text-anchor="middle" class="lbl-sm">Iз, струм замикання</text>
+    <g id="ctrl-Iz" class="ctrl" transform="translate(0,0)">
+      <title>Обирає умовний струм замикання на землю (А). Клік перемикає позицію.</title>
+      <circle r="26" fill="#1c1c1c" stroke="#000" stroke-width="1.2"/>
+      <circle r="21" fill="#2b2b2b"/>
+      <g id="ptr-Iz"><line x1="0" y1="0" x2="0" y2="-18" stroke="#e8e8e8" stroke-width="3.6" stroke-linecap="round"/></g>
+      <text x="0" y="-32" text-anchor="middle" class="lbl-sm" style="fill:#ddd">1</text>
+      <text x="32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">2</text>
+      <text x="0" y="40" text-anchor="middle" class="lbl-sm" style="fill:#ddd">3</text>
+      <text x="-32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">4</text>
+    </g>
+    <text id="val-Iz" x="0" y="52" text-anchor="middle" class="lbl-sm">50 А</text>
+  </g>
+
+  <g transform="translate(780,120)">
+    <text x="0" y="-38" text-anchor="middle" class="lbl-sm">Rз, опір заземлювача</text>
+    <g id="ctrl-Rz" class="ctrl" transform="translate(0,0)">
+      <title>Обирає опір заземлювального пристрою (Ом). Клік перемикає позицію.</title>
+      <circle r="26" fill="#1c1c1c" stroke="#000" stroke-width="1.2"/>
+      <circle r="21" fill="#2b2b2b"/>
+      <g id="ptr-Rz"><line x1="0" y1="0" x2="0" y2="-18" stroke="#e8e8e8" stroke-width="3.6" stroke-linecap="round"/></g>
+      <text x="0" y="-32" text-anchor="middle" class="lbl-sm" style="fill:#ddd">1</text>
+      <text x="32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">2</text>
+      <text x="0" y="40" text-anchor="middle" class="lbl-sm" style="fill:#ddd">3</text>
+      <text x="-32" y="4" text-anchor="middle" class="lbl-sm" style="fill:#ddd">4</text>
+    </g>
+    <text id="val-Rz" x="0" y="52" text-anchor="middle" class="lbl-sm">4 Ом</text>
+  </g>
+
+  <!-- дисплей результатів -->
+  <g transform="translate(500,220)">
+    <rect x="0" y="0" width="480" height="150" rx="4" fill="#0f1a12" stroke="#333" stroke-width="1.2"/>
+    <text id="step-r1"  x="14" y="24"  class="lbl-sm" style="fill:#4ef07a">Нога 1: — м</text>
+    <text id="step-r2"  x="14" y="46"  class="lbl-sm" style="fill:#4ef07a">Нога 2: — м</text>
+    <text id="step-phi" x="14" y="68"  class="lbl-sm" style="fill:#4ef07a">Потенціали: φ1=— В, φ2=— В</text>
+    <text id="step-u"   x="14" y="94"  class="lbl-sm" style="fill:#ffd23a">Напруга кроку: — В</text>
+    <text id="step-i"   x="14" y="116" class="lbl-sm" style="fill:#ffd23a">Струм через людину: — мА</text>
+    <text id="step-verdict" x="14" y="140" class="lbl-sm" style="fill:#fff; font-size:13px">Постав обидві ноги на лінії ліворуч</text>
+  </g>
+
+  <text x="560" y="400" class="lbl-sm" fill="#40484d">Rл і Rвзуття беруться з перемикачів SW6 / SW7 Модуля 1.</text>
+
+</svg>
+</div>
+</div>
+
+<div id="legend2">
+  <b>Легенда позначень — Модуль 2:</b>
+  Rз — опір заземлювального пристрою &nbsp;·&nbsp;
+  Iз — струм замикання на землю (умовний, обирається перемикачем) &nbsp;·&nbsp;
+  φ (фі) — потенціал точки ґрунту відносно "землі на нескінченності" &nbsp;·&nbsp;
+  Rл — умовний опір тіла людини (той самий перемикач SW6, що й у Модулі 1) &nbsp;·&nbsp;
+  Rвзуття — умовний опір взуття (той самий перемикач SW7)
+  <br><br>
+  <i>Значення Rл і Rвзуття спільні для обох модулів — постав їх у Модулі 1, і тут вони застосуються автоматично.</i>
+</div>
+
+</div>
+
+<div id="results-section">
+  <h2>Результати випробуваних сценаріїв</h2>
+  <p class="hint-text-small">Кожного разу, коли ти торкаєшся манекеном приладу (Модуль 1) або ставиш обидві ноги (Модуль 2), результат автоматично записується в таблицю нижче.</p>
+  <table id="results-table">
+    <thead>
+      <tr>
+        <th>№</th><th>Модуль</th><th>Заземлення</th><th>Обрив PEN</th><th>Прилад/сценарій</th>
+        <th>Rл (Ом)</th><th>Rвзуття (Ом)</th><th>Автомат</th><th>U дотику (В)</th><th>I через людину (мА)</th><th>Дія струму</th>
+      </tr>
+    </thead>
+    <tbody id="results-body"></tbody>
+  </table>
+  <p id="results-empty">Поки що немає жодного запису — спробуй торкнутись манекеном приладу вище.</p>
+
+  <h2>Висновок</h2>
+  <textarea id="conclusion-text" rows="6" placeholder="Напиши тут свій висновок за результатами лабораторної роботи..."></textarea>
+
+  <button id="report-btn">Сформувати звіт для викладача (друк / PDF) →</button>
+</div>
+
+<div id="app-footer">Симулятор «Електробезпека в системах електропостачання» — навчальна програма для лабораторних робіт з охорони праці</div>
+
+</div>
+
+<div id="report-view">
+  <h1 id="report-title">Звіт з лабораторної роботи</h1>
+  <p><b>Програма:</b> Віртуальний лабораторний стенд «Електробезпека в системах електропостачання» (симулятор для laboratorних робіт з охорони праці)</p>
+  <p><b>Тема:</b> «Електробезпека в системах електропостачання»</p>
+  <p><b>Студент:</b> <span id="report-name"></span> &nbsp; <b>Група:</b> <span id="report-group"></span></p>
+  <p><b>Дата:</b> <span id="report-date"></span></p>
+  <h2>Схема стенда (стан на момент формування звіту)</h2>
+  <div id="report-panel-snapshot"></div>
+  <h2>Таблиця результатів</h2>
+  <table id="report-table"></table>
+  <h2>Висновок студента</h2>
+  <p id="report-conclusion"></p>
+  <p style="font-size:11px;color:#666;margin-top:24px;">Сформовано програмою «Симулятор Електробезпека» — virtual-electrosafety-stand.html</p>
+</div>
+
+<script>
+/* Блокуємо масштабування сторінки через жест "зведення пальців" на тачпаді —
+   Chrome передає цей жест як подію wheel з ctrlKey=true. Без цього кожен
+   випадковий дотик до тачпада під час кліку міг зменшувати/збільшувати сторінку. */
+window.addEventListener('wheel', function(e){
+  if (e.ctrlKey) e.preventDefault();
+}, { passive: false });
+document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
+
+/* ===================== КРОК 2: СТАН ПАНЕЛІ ===================== */
+const RESISTOR_TABLE = {
+  Rch:    [1000, 3000, 6000, 10000],   // SW6 — опір тіла людини, Ом
+  Rshoes: [0, 5000, 20000, 100000],     // SW7 — опір взуття, Ом
+  Rfloor: [1000, 5000, 20000, 100000],  // SW8 — опір підлоги, Ом (суха дерев'яна / бетон / кахель / волога)
+  Rloop:  1.5,                          // петля фаза-PE(N) при справному провіднику, Ом
+  Uphase: 220                           // фазна напруга, В
+};
+
+// SW1-SW5 — перемикачі точок вимірювання мультиметром (кількість позицій кожного)
+const SW_POSITIONS = { SW1: 3, SW2: 2, SW3: 2, SW4: 2, SW5: 2, SW6: 4, SW7: 4, SW8: 4 };
+
+// умовні (навчальні) показання мультиметра для кожної позиції SW1-SW5
+const MEASURE_TABLE = {
+  SW1: [ 'Rфа = 0,08 Ом', 'Rфв = 0,09 Ом', 'Rфс = 0,07 Ом' ],
+  SW2: [ 'справна: > 5 МОм', 'пошкоджена: 0,2 МОм ⚠︎ (норма ≥ 0,5 МОм)' ],
+  SW3: [ 'Rpe справний: 0,10 Ом', 'обрив PE: ∞ ⚠︎' ],
+  SW4: [ 'у нормі: 4 Ом', 'вище норми: 15 Ом ⚠︎ (норма ≤ 10 Ом)' ],
+  SW5: [ 'у нормі: 4 Ом', 'вище норми: 12 Ом ⚠︎ (норма ≤ 10 Ом для IT/TN)' ]
+};
+
+function freshState(){
+  return {
+    network: false,
+    breakers: { QF1: true, QF2: true, QF3: true, QF4: true },
+    switches: { SW1: 1, SW2: 1, SW3: 1, SW4: 1, SW5: 1, SW6: 1, SW7: 1, SW8: 1 },
+    groundingSystem: null,      // TN-C | TN-S | TN-C-S — студент обирає сам
+    penBroken: false,           // актуально лише для TN-C
+    faultDevice: null,          // 'lamp' | 'printer' | 'heater' | null — пробій ізоляції на корпус
+    manikinTouching: false      // чи торкається людина корпусу
+  };
+}
+let panelState = freshState();
+
+const DEVICE_BREAKER = { lamp: 'QF2', printer: 'QF3', heater: 'QF4' };
+
+/* ===================== ЗБЕРЕЖЕННЯ СЕСІЇ (localStorage) =====================
+   Захист від втрати роботи при зависанні комп'ютера чи відключенні світла.
+   Зберігаємо після кожної дії; при відкритті файлу — відновлюємо автоматично. */
+const STORAGE_KEY = 'electrosafety_session_v1';
+
+function saveSession(){
+  try {
+    const data = {
+      studentInfo: studentInfo,
+      panelState: {
+        network: panelState.network,
+        breakers: panelState.breakers,
+        switches: panelState.switches,
+        groundingSystem: panelState.groundingSystem,
+        penBroken: panelState.penBroken,
+        faultDevice: panelState.faultDevice
+      },
+      stepState: { IzIdx: stepState.IzIdx, RzIdx: stepState.RzIdx },
+      tutorialIndex: tutorialIndex,
+      activeModule: activeModule,
+      resultsLog: resultsLog,
+      conclusion: document.getElementById('conclusion-text') ? document.getElementById('conclusion-text').value : ''
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch(e){
+    /* На момент першого виклику ще не всі змінні ініціалізовані (порядок
+       виконання скрипту), або localStorage недоступний — просто пропускаємо. */
+  }
+}
+
+function loadSession(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e){ return null; }
+}
+
+function clearSession(){
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e){}
+}
+
+/* ===================== ПОКРОКОВА ПІДКАЗКА ===================== */
+const TUTORIAL = [
+  { text: "Натисни на тумблер SA1 (блок «Живлення» внизу зліва), щоб увімкнути мережу.",
+    done: s => s.network,
+    reveal: "Мережа увімкнена — тепер живлення може подаватись на автомати QF2-QF4." },
+  { text: "Автомати QF2, QF3, QF4 вже увімкнені. Подивись на лампу, принтер і обігрівач — вони отримали живлення?",
+    done: (s,r) => r.lamp && r.printer && r.heater,
+    reveal: "Так, усі три прилади під напругою — коло справне, немає жодної аварії." },
+  { text: "Наведи мишку на кнопки TN-C / TN-S / TN-C-S зверху й прочитай підказки. Потім обери TN-S.",
+    done: s => s.groundingSystem === 'TN-S',
+    reveal: "TN-S: нейтраль (N) і захисний провідник (PE) окремі по всій мережі — найнадійніший варіант захисту." },
+  { text: "Натисни на корпус лампи — змодулюй пробій ізоляції (з'явиться жовтий значок ⚠).",
+    done: s => s.faultDevice === 'lamp',
+    reveal: "На корпусі лампи тепер \"пробій\": фаза торкається металевого корпусу." },
+  { text: "Натисни на манекена — людина торкається корпусу лампи голою рукою. Дивись на автомат QF2: чи спрацював запобіжник?",
+    done: (s,r) => s.manikinTouching,
+    reveal: "Автомат QF2 миттєво відключився! Напруга дотику = 0 В, струм через людину = 0 мА. Ось чому TN-S безпечна навіть при пробої." },
+  { text: "Тепер натисни ще раз на манекена (відпустити руку) і ще раз на лампу (зняти пробій), щоб повернутись у безпечний стан.",
+    done: s => !s.manikinTouching && !s.faultDevice,
+    reveal: "Добре, повернулись у вихідний стан. Тепер перевіримо іншу систему." },
+  { text: "Автомат QF2 вимкнувся після спрацювання — увімкни його знову, а тоді обери систему заземлення TN-C.",
+    done: s => s.breakers.QF2 && s.groundingSystem === 'TN-C',
+    reveal: "TN-C: нейтраль і захисний провідник об'єднані в один спільний PEN-провідник." },
+  { text: "Натисни «Обрив PEN» — змодулюй аварію на цьому спільному провіднику.",
+    done: s => s.penBroken,
+    reveal: "PEN обірваний. Тепер немає низькоомного зворотного шляху для струму замикання." },
+  { text: "Знову натисни на корпус лампи (пробій), а тоді на манекена (дотик). Уважно дивись на дисплей внизу — «Струм через людину».",
+    done: (s,r) => s.manikinTouching && s.faultDevice === 'lamp',
+    reveal: "Автомат НЕ спрацював — корпус лишився під повною фазною напругою (220 В), і через тіло людини пішов реальний, небезпечний струм! Це і є ключова небезпека PEN у TN-C." },
+  { text: "Відпусти манекена і зніми пробій з лампи (клікни на манекена, потім на лампу ще раз).",
+    done: s => !s.manikinTouching && !s.faultDevice,
+    reveal: "Повернулись у безпечний стан." },
+  { text: "Тепер перевір ПРИНТЕР: увімкни QF3 (якщо вимкнений), обери TN-S, натисни на корпус принтера (пробій), а тоді на манекена.",
+    done: (s,r) => s.groundingSystem === 'TN-S' && s.faultDevice === 'printer' && s.manikinTouching,
+    reveal: "QF3 спрацював так само миттєво — TN-S захищає будь-який прилад на панелі, не тільки лампу." },
+  { text: "Відпусти манекена, зніми пробій з принтера, увімкни QF3 назад.",
+    done: s => !s.manikinTouching && !s.faultDevice && s.breakers.QF3,
+    reveal: "Добре." },
+  { text: "Тепер перевір ОБІГРІВАЧ із системою TN-C-S: обери TN-C-S, натисни на корпус обігрівача (пробій), а тоді на манекена.",
+    done: (s,r) => s.groundingSystem === 'TN-C-S' && s.faultDevice === 'heater' && s.manikinTouching,
+    reveal: "TN-C-S теж захистила — вона поводиться як TN-S там, де N і PE вже розділені." },
+  { text: "Відпусти манекена, зніми пробій з обігрівача, увімкни QF4 назад.",
+    done: s => !s.manikinTouching && !s.faultDevice && s.breakers.QF4,
+    reveal: "Добре." },
+  { text: "Тепер дослідимо роль SW6 (опір тіла). Обери TN-C і натисни «Обрив PEN» (якщо ще не увімкнено).",
+    done: s => s.groundingSystem === 'TN-C' && s.penBroken,
+    reveal: "TN-C з обірваним PEN — це і є небезпечний сценарій, який ми зараз досліджуємо детальніше." },
+  { text: "Важливо: перевір, що автомат QF2 УВІМКНЕНИЙ (зелений). Якщо він червоний (вимкнений після попереднього спрацювання) — клацни на нього. Потім зроби пробій на лампі й зміни позицію SW6 (клацни на нього кілька разів).",
+    done: s => s.breakers.QF2 && s.faultDevice === 'lamp' && s.switches.SW6 !== 1,
+    reveal: "Якщо струм при попередніх спробах був 0 — це якраз тому, що QF2 лишався вимкненим. Тепер він увімкнений, і струм буде реальним." },
+  { text: "Тепер торкнись манекеном лампи і подивись на струм. Потім клацни SW6 ще раз (нова позиція) і торкнись знову — порівняй два значення струму.",
+    done: s => s.manikinTouching,
+    reveal: "Що більший опір тіла (Rл), то менший струм через людину при тій самій напрузі — саме тому в таблиці результатів нижче ти побачиш різні цифри для різних позицій SW6." },
+  { text: "Тепер так само дослідимо SW7 (опір взуття): відпусти манекена (QF2 має лишатись увімкненим), клацни SW7 кілька разів, щоб змінити позицію, а тоді знову торкнись манекеном лампи.",
+    done: s => s.switches.SW7 !== 1 && s.manikinTouching && s.breakers.QF2,
+    reveal: "Взуття з високим опором (суха гумова підошва тощо) значно зменшує струм через тіло — це і є принцип діелектричного взуття як засобу захисту." },
+  { text: "Поруч є SW8 — опір підлоги. Клацни на нього, щоб обрати іншу вологість підлоги (суха → бетон → кахель → волога), і ще раз торкнись манекеном лампи — порівняй струм із попередніми спробами.",
+    done: s => s.switches.SW8 !== 1,
+    reveal: "Волога чи струмопровідна підлога різко знижує опір ланцюга \"людина-підлога\" — тому струм через тіло зростає навіть при тих самих Rл і Rвзуття. Саме тому в цехах з вологою підлогою вимоги до діелектричного взуття суворіші." },
+  { text: "У нижньому ряду панелі є ще п'ять перемикачів SW1–SW5 — вони імітують точки підключення мультиметра на реальному стенді (фазні провідники, ізоляція, PE, повторне заземлення, R3). Клацни по черзі на кожен із них і подивись, яке умовне показання з'являється під ним.",
+    done: s => ['SW1','SW2','SW3','SW4','SW5'].every(n => s.switches[n] !== 1),
+    reveal: "Готово — тепер у тебе є умовні показання опору для всіх контрольних точок стенду. SW4 і SW5 у другій позиції показують перевищення норми (> 10 Ом) — саме такі покази на реальному стенді сигналізують, що заземлення потребує ремонту." },
+  { text: "Прокрути сторінку вниз до таблиці «Результати випробуваних сценаріїв». Там записані всі твої спроби — перевір, що там є рядки з лампою, принтером, обігрівачем і різними позиціями SW6/SW7.",
+    done: () => resultsLog.length >= 5,
+    reveal: "Чудово — у тебе вже достатньо даних, щоб зробити висновок." },
+  { text: "Напиши висновок у полі «Висновок» нижче. Обов'язково познач: (1) чому TN-S і TN-C-S захищають людину при пробої ізоляції, а TN-C з обривом PEN — ні; (2) як позиція SW6, SW7 і SW8 впливає на струм через людину; (3) що показали виміряні тобою значення SW1–SW5 (чи є серед них такі, що не відповідають нормі). Після цього натисни «Сформувати звіт для викладача».",
+    done: () => document.getElementById('conclusion-text') && document.getElementById('conclusion-text').value.trim().length > 20,
+    reveal: "Висновок написано — тепер можна формувати звіт." },
+  { text: "Лабораторну роботу виконано повністю. Натисни «Сформувати звіт для викладача (друк / PDF)» внизу сторінки, і в діалозі друку обери «Зберегти як PDF».",
+    done: () => true,
+    reveal: "" }
+];
+let tutorialIndex = 0;
+let activeModule = 1;
+
+function renderHint(result){
+  const step = TUTORIAL[tutorialIndex];
+  const isDone = step.done(panelState, result);
+  document.getElementById('hint-step').textContent = `Крок ${tutorialIndex + 1} з ${TUTORIAL.length}`;
+  document.getElementById('hint-text').textContent = isDone && step.reveal ? (step.text + '  ✅ ' + step.reveal) : step.text;
+  const nextBtn = document.getElementById('hint-next');
+  nextBtn.disabled = !isDone || tutorialIndex === TUTORIAL.length - 1;
+}
+
+document.getElementById('hint-next').addEventListener('click', () => {
+  if (tutorialIndex < TUTORIAL.length - 1){
+    tutorialIndex++;
+    render();
+  }
+});
+document.getElementById('hint-reset').addEventListener('click', () => {
+  panelState = freshState();
+  tutorialIndex = 0;
+  render();
+  saveSession();
+});
+
+/* ===================== РУШІЙ РОЗРАХУНКУ КОЛА (TN) =====================
+   1) Неперервність кола: живлення є, якщо мережа + QF1 + автомат гілки увімкнені.
+   2) Якщо на увімкненому приладі є пробій ізоляції на корпус — рахуємо,
+      чи спрацьовує автоматичне відключення (низькоомна петля фаза-PE)
+      і, якщо ні, яка напруга дотику й струм через людину при контакті. */
+function calculateCircuit(state){
+  const mainsOn = state.network && state.breakers.QF1;
+  const branchOn = {
+    lamp:    mainsOn && state.breakers.QF2,
+    printer: mainsOn && state.breakers.QF3,
+    heater:  mainsOn && state.breakers.QF4
+  };
+
+  let touchVoltage = 0, bodyCurrent = 0, dangerLevel = 'none', breakerTripped = false;
+
+  const dev = state.faultDevice;
+  if (dev && branchOn[dev]){
+    // Чи є справний низькоомний зворотний провідник (PE/PEN) до джерела?
+    const penIntact = !(state.groundingSystem === 'TN-C' && state.penBroken);
+
+    if (penIntact){
+      // Низькоомна петля фаза-PE(N) → великий струм КЗ → автомат спрацьовує
+      const faultCurrent = RESISTOR_TABLE.Uphase / RESISTOR_TABLE.Rloop;
+      if (faultCurrent > 20){        // умовна уставка автомата, А
+        breakerTripped = true;
+        state.breakers[DEVICE_BREAKER[dev]] = false;
+        branchOn[dev] = false;
+      }
+      touchVoltage = 0;
+      bodyCurrent = 0;
+    } else {
+      // TN-C з обірваним PEN: корпус "плаває" під фазною напругою,
+      // струму КЗ немає — автомат НЕ спрацьовує
+      touchVoltage = RESISTOR_TABLE.Uphase;
+      if (state.manikinTouching){
+        const Rch = RESISTOR_TABLE.Rch[state.switches.SW6 - 1];
+        const Rsh = RESISTOR_TABLE.Rshoes[state.switches.SW7 - 1];
+        const Rf  = RESISTOR_TABLE.Rfloor[state.switches.SW8 - 1];
+        bodyCurrent = touchVoltage / (Rch + Rsh + Rf);
+      }
+    }
+  }
+
+  if (state.manikinTouching){
+    const mA = bodyCurrent * 1000;
+    dangerLevel = mA > 100 ? 'lethal' : mA > 10 ? 'danger' : 'safe';
+  }
+
+  return { ...branchOn, mainsOn, touchVoltage, bodyCurrent, dangerLevel, breakerTripped };
+}
+
+/* ===================== РЕНДЕР СТАНУ НА СХЕМУ ===================== */
+function setLed(id, on){
+  const el = document.getElementById(id);
+  if (el) el.setAttribute('fill', on ? '#2f8f4e' : '#8a2020');
+}
+
+const SW_ANGLE = { 1: 0, 2: 90, 3: 180, 4: 270 };
+
+function renderSwitch(name){
+  const ptr = document.getElementById('ptr-' + name);
+  if (ptr) ptr.setAttribute('transform', `rotate(${SW_ANGLE[panelState.switches[name]]})`);
+}
+
+function render(){
+  const result = calculateCircuit(panelState);
+  renderHint(result);
+
+  setLed('led-QF1', panelState.breakers.QF1);
+  setLed('led-QF2', panelState.breakers.QF2);
+  setLed('led-QF3', panelState.breakers.QF3);
+  setLed('led-QF4', panelState.breakers.QF4);
+  setLed('led-HL1', result.mainsOn);
+
+  const bulb = document.getElementById('lamp-bulb');
+  if (bulb){
+    if (result.lamp){
+      bulb.setAttribute('fill', '#ffd23a');
+      bulb.setAttribute('filter', 'drop-shadow(0 0 10px #ffd23a)');
+    } else {
+      bulb.setAttribute('fill', '#1c1c1c');
+      bulb.removeAttribute('filter');
+    }
+  }
+
+  function setSwitch(prefix, on){
+    const track = document.getElementById('track-' + prefix);
+    const knob = document.getElementById('knob-' + prefix);
+    if (track) track.setAttribute('fill', on ? '#2f8f4e' : '#8a2020');
+    if (knob) knob.setAttribute('cy', on ? -8 : 8);
+  }
+  setSwitch('top', panelState.network);
+  setSwitch('SA1', panelState.network);
+
+  // перемикачі SW6/SW7/SW8
+  renderSwitch('SW6');
+  renderSwitch('SW7');
+  renderSwitch('SW8');
+  document.getElementById('val-SW6').textContent = RESISTOR_TABLE.Rch[panelState.switches.SW6-1] + ' Ом';
+  document.getElementById('val-SW7').textContent = RESISTOR_TABLE.Rshoes[panelState.switches.SW7-1] + ' Ом';
+  document.getElementById('val-SW8').textContent = RESISTOR_TABLE.Rfloor[panelState.switches.SW8-1] + ' Ом';
+
+  // перемикачі точок вимірювання SW1-SW5
+  ['SW1','SW2','SW3','SW4','SW5'].forEach(name => {
+    renderSwitch(name);
+    const el = document.getElementById('val-' + name);
+    if (el) el.textContent = MEASURE_TABLE[name][panelState.switches[name] - 1];
+  });
+
+  // кнопки системи заземлення
+  ['TN-C','TN-S','TN-C-S'].forEach(gs => {
+    document.getElementById('gs-' + gs).classList.toggle('selected', panelState.groundingSystem === gs);
+  });
+  document.getElementById('ctrl-pen').classList.toggle('armed', panelState.penBroken);
+
+  // попереджувальні значки на корпусах
+  ['lamp','printer','heater'].forEach(dev => {
+    document.getElementById('warn-' + dev).setAttribute('opacity', panelState.faultDevice === dev ? 1 : 0);
+  });
+
+  // індикатор небезпеки на манекені
+  const ring = document.getElementById('danger-ring');
+  document.getElementById('touch-label').setAttribute('opacity', panelState.manikinTouching ? 1 : 0);
+  if (panelState.manikinTouching && (result.dangerLevel === 'danger' || result.dangerLevel === 'lethal')){
+    ring.setAttribute('opacity', 1);
+    ring.classList.add('danger');
+  } else if (panelState.manikinTouching && result.dangerLevel === 'safe'){
+    ring.setAttribute('opacity', 1);
+    ring.classList.remove('danger');
+    ring.setAttribute('stroke', '#2f8f4e');
+  } else {
+    ring.setAttribute('opacity', 0);
+    ring.classList.remove('danger');
+    ring.setAttribute('stroke', '#8a2020');
+  }
+
+  // показники
+  const mA = result.bodyCurrent * 1000;
+  document.getElementById('readout-A').textContent =
+    'Струм через людину: ' + mA.toFixed(1) + ' мА';
+  document.getElementById('readout-V').textContent =
+    'Напруга дотику: ' + result.touchVoltage.toFixed(0) + ' В';
+  const effect = currentEffect(mA);
+  const effectEl = document.getElementById('readout-effect');
+  effectEl.textContent = 'Дія струму: ' + (panelState.manikinTouching ? effect.text : '—');
+  effectEl.style.fill = panelState.manikinTouching ? effect.color : '#4ef07a';
+  saveSession();
+}
+
+/* ===================== ФІЗІОЛОГІЧНА ДІЯ СТРУМУ НА ЛЮДИНУ =====================
+   Класифікація за силою струму через тіло (за нормативною таблицею). */
+function currentEffect(mA){
+  if (mA < 0.5)  return { text: 'практично не відчувається — безпечно',                color: '#4ef07a' };
+  if (mA < 1.5)  return { text: 'поріг відчуття — поколювання, свербіж у пальцях',      color: '#4ef07a' };
+  if (mA < 5)    return { text: 'відчутні скорочення м\'язів, легке тремтіння рук',     color: '#ffd23a' };
+  if (mA < 10)   return { text: 'сильніші судоми, біль — руку ще можна відірвати',      color: '#ffd23a' };
+  if (mA < 25)   return { text: 'невідпускаючий струм — руку не розтиснути',            color: '#ffb84e' };
+  if (mA < 50)   return { text: 'параліч дихання, судоми, порушення серця',             color: '#ff8a4e' };
+  if (mA < 100)  return { text: 'тяжкі опіки, фібриляція серця',                        color: '#ff5a5a' };
+  return              { text: 'смертельний струм — зупинка серця, клінічна смерть', color: '#ff2020' };
+}
+
+/* ===================== ВІРТУАЛЬНИЙ МУЛЬТИМЕТР =====================
+   Клік по двох клемах (X1, X2 ...) на схемі підключає віртуальний
+   мультиметр і показує напругу (В), опір (Ом) або струм (мА) між ними —
+   так само, як студент на реальному стенді встромляє щуп у гніздо. */
+
+// до якого електричного вузла належить кожна клема (топологія кола)
+const NODE_OF = {
+  X1:'PE_SRC',
+  X2:'PE', X20:'PE', X32:'PE',
+  X4:'EARTH', X5:'EARTH', X13:'EARTH', X15:'EARTH', X18:'EARTH', X28:'EARTH', X36:'EARTH',
+  X3:'A', X7:'A', X8:'A', X19:'A', X29:'A', X21:'A', X30:'A',
+  X6:'LAMP_HOT', X10:'LAMP_HOT', X11:'LAMP_HOT', X12:'LAMP_CASE',
+  X22:'PRN_HOT', X23:'PRN_HOT', X26:'PRN_HOT', X24:'PRN_CASE',
+  X33:'HTR_HOT', X34:'HTR_HOT', X27:'HTR_HOT', X35:'HTR_CASE',
+  X16:'HAND', X17:'FOOT'
+};
+
+function mmEdges(){
+  return [
+    ['PE_SRC','PE',    () => panelState.switches.SW3 === 1 ? 0.10 : Infinity],
+    ['PE','EARTH',     () => panelState.switches.SW5 === 1 ? 4 : 12],
+    ['A','LAMP_HOT',   () => panelState.breakers.QF2 ? 0 : Infinity],
+    ['A','PRN_HOT',    () => panelState.breakers.QF3 ? 0 : Infinity],
+    ['A','HTR_HOT',    () => panelState.breakers.QF4 ? 0 : Infinity]
+  ];
+}
+
+function mmFindEdge(n1, n2){
+  for (const [a, b, fn] of mmEdges()){
+    if ((a === n1 && b === n2) || (a === n2 && b === n1)) return fn();
+  }
+  return null;
+}
+
+function mmNodeVoltage(node, result){
+  switch(node){
+    case 'A':        return result.mainsOn ? 220 : 0;
+    case 'LAMP_HOT':  return result.lamp ? 220 : 0;
+    case 'PRN_HOT':   return result.printer ? 220 : 0;
+    case 'HTR_HOT':   return result.heater ? 220 : 0;
+    case 'PE_SRC': case 'PE': case 'EARTH': return 0;
+    case 'LAMP_CASE': return panelState.faultDevice === 'lamp'    ? result.touchVoltage : 0;
+    case 'PRN_CASE':  return panelState.faultDevice === 'printer' ? result.touchVoltage : 0;
+    case 'HTR_CASE':  return panelState.faultDevice === 'heater'  ? result.touchVoltage : 0;
+    case 'FOOT':      return 0;
+    case 'HAND':
+      if (!panelState.manikinTouching) return null;
+      return panelState.faultDevice ? result.touchVoltage : 0;
+    default: return null;
+  }
+}
+
+const MM_LIVE_NODES = ['A','LAMP_HOT','PRN_HOT','HTR_HOT'];
+
+function mmFmtOhm(v){
+  if (v === Infinity) return '∞ Ом (розрив кола)';
+  const s = v.toFixed(2).replace(/\.?0+$/,'').replace('.', ',');
+  return (s === '' ? '0' : s) + ' Ом';
+}
+function mmFmtVolt(v){ return '≈ ' + Math.round(v) + ' В'; }
+function mmFmtCurrent(a){ return (a * 1000).toFixed(1).replace('.', ',') + ' мА'; }
+
+function mmMeasure(mode, idA, idB){
+  const result = calculateCircuit(panelState);
+  const pairKey = [idA, idB].sort().join('-');
+
+  // цифрові прилади на панелі — показують ті самі величини, що й нижнє табло
+  if (pairKey === 'X41-X42') return mode === 'I' || mode === 'U'
+    ? (panelState.manikinTouching ? mmFmtCurrent(result.bodyCurrent) : '0 мА (людина не торкається)')
+    : 'Клеми амперметра — призначені для струму (мА).';
+  if (pairKey === 'X43-X44') return mode === 'U'
+    ? mmFmtVolt(result.touchVoltage)
+    : 'Клеми вольтметра — призначені для напруги (В).';
+
+  const nA = NODE_OF[idA], nB = NODE_OF[idB];
+  if (!nA || !nB) return 'Ця клема поки не задіяна в моделі кола.';
+
+  if (mode === 'R'){
+    const liveWarning = (result.mainsOn && (MM_LIVE_NODES.includes(nA) || MM_LIVE_NODES.includes(nB)))
+      ? '⚠ Увага: у реальності перед вимірюванням опору коло треба знеструмити (вимкнути SA1). ' : '';
+    if (nA === nB) return liveWarning + '≈ 0 Ом (одна й та сама точка кола)';
+    const r = mmFindEdge(nA, nB);
+    if (r !== null) return liveWarning + mmFmtOhm(r);
+    return 'Між цими клемами немає прямого шляху в моделі. Спробуй, наприклад, X1–X2 (Rpe) або X2–X4 (R3).';
+  }
+
+  if (mode === 'U'){
+    const vA = mmNodeVoltage(nA, result), vB = mmNodeVoltage(nB, result);
+    if (vA === null || vB === null) return 'Коло розімкнене в цій точці — напругу виміряти нема від чого (людина не торкається приладу).';
+    return mmFmtVolt(Math.abs(vA - vB));
+  }
+
+  if (mode === 'I'){
+    if (nA === nB) return 'Обидві клеми в одній точці кола — так струм не виміряти (амперметр треба увімкнути послідовно, розірвавши коло).';
+    if ((nA === 'HAND' && nB === 'FOOT') || (nA === 'FOOT' && nB === 'HAND')){
+      return panelState.manikinTouching ? mmFmtCurrent(result.bodyCurrent) : '0 мА (людина не торкається приладу)';
+    }
+    return 'У цій версії струм між цими клемами не моделюється. Спробуй X16–X17 (через тіло людини) або X41–X42 (амперметр).';
+  }
+}
+
+let mmMode = 'U';
+let mmSelected = [];
+const MM_MODE_LABEL = { U:'напруга', R:'опір', I:'струм' };
+
+function mmAbsCenter(el){
+  const svg = document.getElementById('panel');
+  const bbox = el.getBBox();
+  const pt = svg.createSVGPoint();
+  pt.x = bbox.x + bbox.width / 2;
+  pt.y = bbox.y + bbox.height / 2;
+  return pt.matrixTransform(el.getCTM());
+}
+
+function mmHighlight(id, on){
+  const el = document.getElementById(id);
+  if (!el) return;
+  let ring = document.getElementById('mm-ring-' + id);
+  if (on){
+    if (!ring){
+      ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      ring.setAttribute('id', 'mm-ring-' + id);
+      ring.setAttribute('r', '13');
+      ring.setAttribute('fill', 'none');
+      ring.setAttribute('stroke', '#2f6fa0');
+      ring.setAttribute('stroke-width', '3');
+      ring.setAttribute('class', 'mm-ring');
+      ring.setAttribute('pointer-events', 'none');
+      document.getElementById('panel').appendChild(ring);
+    }
+    const p = mmAbsCenter(el);
+    ring.setAttribute('cx', p.x);
+    ring.setAttribute('cy', p.y);
+  } else if (ring){
+    ring.remove();
+  }
+}
+
+function mmUpdateReadout(){
+  const box = document.getElementById('mm-readout');
+  if (mmSelected.length === 0){
+    box.textContent = 'Клікни по двох клемах (червоних точках) на схемі.';
+  } else if (mmSelected.length === 1){
+    box.textContent = `Обрано ${mmSelected[0]} — клікни другу клему.`;
+  } else {
+    const [a, b] = mmSelected;
+    const value = mmMeasure(mmMode, a, b);
+    box.textContent = `${a}–${b}, ${MM_MODE_LABEL[mmMode]}: ${value}`;
+  }
+}
+
+function mmOnTerminalClick(id){
+  if (mmSelected.includes(id)){
+    mmSelected = mmSelected.filter(x => x !== id);
+    mmHighlight(id, false);
+  } else {
+    if (mmSelected.length >= 2){
+      mmSelected.forEach(x => mmHighlight(x, false));
+      mmSelected = [];
+    }
+    mmSelected.push(id);
+    mmHighlight(id, true);
+  }
+  mmUpdateReadout();
+}
+
+function mmAddLabel(el){
+  const p = mmAbsCenter(el);
+  const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  t.setAttribute('x', p.x + 9);
+  t.setAttribute('y', p.y - 9);
+  t.setAttribute('font-size', '9');
+  t.setAttribute('fill', '#5a6266');
+  t.setAttribute('pointer-events', 'none');
+  t.textContent = el.id;
+  document.getElementById('panel').appendChild(t);
+}
+
+function mmInit(){
+  document.querySelectorAll('#panel [id]').forEach(el => {
+    if (!/^X\d+$/.test(el.id)) return;
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', (e) => { e.stopPropagation(); mmOnTerminalClick(el.id); });
+    mmAddLabel(el);
+  });
+  document.querySelectorAll('.mm-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      mmMode = btn.dataset.mode;
+      document.querySelectorAll('.mm-mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+      mmUpdateReadout();
+    });
+  });
+  document.getElementById('mm-clear').addEventListener('click', () => {
+    mmSelected.forEach(x => mmHighlight(x, false));
+    mmSelected = [];
+    mmUpdateReadout();
+  });
+}
+mmInit();
+
+
+/* ===================== ОБРОБНИКИ КЛІКІВ ===================== */
+function toggleBreaker(name){
+  panelState.breakers[name] = !panelState.breakers[name];
+  render();
+}
+function toggleNetwork(){
+  panelState.network = !panelState.network;
+  render();
+}
+function cycleSwitch(name){
+  const n = SW_POSITIONS[name] || 4;
+  panelState.switches[name] = panelState.switches[name] % n + 1;
+  render();
+}
+function setGrounding(gs){
+  panelState.groundingSystem = gs;
+  render();
+}
+function togglePen(){
+  panelState.penBroken = !panelState.penBroken;
+  render();
+}
+function toggleFault(dev){
+  panelState.faultDevice = (panelState.faultDevice === dev) ? null : dev;
+  render();
+}
+function toggleTouch(){
+  const wasTouching = panelState.manikinTouching;
+  panelState.manikinTouching = !panelState.manikinTouching;
+  render();
+  if (!wasTouching && panelState.manikinTouching){
+    logModule1Result();
+  }
+}
+
+document.getElementById('ctrl-QF1').addEventListener('click', () => toggleBreaker('QF1'));
+document.getElementById('ctrl-QF2').addEventListener('click', () => toggleBreaker('QF2'));
+document.getElementById('ctrl-QF3').addEventListener('click', () => toggleBreaker('QF3'));
+document.getElementById('ctrl-QF4').addEventListener('click', () => toggleBreaker('QF4'));
+document.getElementById('ctrl-SA1').addEventListener('click', toggleNetwork);
+document.getElementById('ctrl-SB1').addEventListener('click', () => {
+  panelState.network = false;
+  render();
+  saveSession();
+});
+document.getElementById('toggle-top').addEventListener('click', toggleNetwork);
+document.getElementById('ctrl-SW6').addEventListener('click', () => cycleSwitch('SW6'));
+document.getElementById('ctrl-SW7').addEventListener('click', () => cycleSwitch('SW7'));
+document.getElementById('ctrl-SW8').addEventListener('click', () => cycleSwitch('SW8'));
+['SW1','SW2','SW3','SW4','SW5'].forEach(name => {
+  document.getElementById('ctrl-' + name).addEventListener('click', () => cycleSwitch(name));
+});
+document.getElementById('gs-TN-C').addEventListener('click', () => setGrounding('TN-C'));
+document.getElementById('gs-TN-S').addEventListener('click', () => setGrounding('TN-S'));
+document.getElementById('gs-TN-C-S').addEventListener('click', () => setGrounding('TN-C-S'));
+document.getElementById('ctrl-pen').addEventListener('click', togglePen);
+document.getElementById('dev-lamp').addEventListener('click', () => toggleFault('lamp'));
+document.getElementById('dev-printer').addEventListener('click', () => toggleFault('printer'));
+document.getElementById('dev-heater').addEventListener('click', () => toggleFault('heater'));
+document.getElementById('ctrl-manikin').addEventListener('click', toggleTouch);
+
+render();
+
+/* ===================== ПЕРЕМИКАННЯ МОДУЛІВ ===================== */
+document.getElementById('tab-module1').addEventListener('click', () => {
+  document.getElementById('module-1').style.display = '';
+  document.getElementById('module-2').style.display = 'none';
+  document.getElementById('tab-module1').classList.add('active');
+  document.getElementById('tab-module2').classList.remove('active');
+  activeModule = 1;
+  saveSession();
+});
+document.getElementById('tab-module2').addEventListener('click', () => {
+  document.getElementById('module-1').style.display = 'none';
+  document.getElementById('module-2').style.display = '';
+  document.getElementById('tab-module2').classList.add('active');
+  document.getElementById('tab-module1').classList.remove('active');
+  activeModule = 2;
+  renderStep();
+  saveSession();
+});
+
+/* ===================== МОДУЛЬ 2: КРОКОВА НАПРУГА ===================== */
+const IZ_TABLE = [50, 150, 300, 600];   // А
+const RZ_TABLE = [4, 10, 30, 100];      // Ом
+const ELECTRODE_A = 0.5;                // умовний радіус заземлювача, м
+const PX_PER_M = 50;                    // масштаб: 50px = 1м
+
+const stepState = {
+  IzIdx: 0,
+  RzIdx: 0,
+  r1: null,
+  r2: null
+};
+
+function potentialAt(r, phi0){
+  const rr = Math.max(r, ELECTRODE_A);
+  return phi0 * (ELECTRODE_A / rr);
+}
+
+function calculateStepVoltage(){
+  const Iz = IZ_TABLE[stepState.IzIdx];
+  const Rz = RZ_TABLE[stepState.RzIdx];
+  const phi0 = Iz * Rz; // потенціал заземлювача відносно "землі на нескінченності", В
+
+  if (stepState.r1 === null || stepState.r2 === null){
+    return { ready: false, Iz, Rz, phi0 };
+  }
+  const phi1 = potentialAt(stepState.r1, phi0);
+  const phi2 = potentialAt(stepState.r2, phi0);
+  const Ustep = Math.abs(phi1 - phi2);
+  const Rch = RESISTOR_TABLE.Rch[panelState.switches.SW6 - 1];
+  const Rsh = RESISTOR_TABLE.Rshoes[panelState.switches.SW7 - 1];
+  const bodyCurrent = Ustep / (Rch + 2 * Rsh);
+  const mA = bodyCurrent * 1000;
+  const dangerLevel = mA > 100 ? 'lethal' : mA > 10 ? 'danger' : 'safe';
+  return { ready: true, Iz, Rz, phi0, phi1, phi2, Ustep, bodyCurrent, dangerLevel };
+}
+
+function svgPoint(svg, clientX, clientY){
+  const pt = svg.createSVGPoint();
+  pt.x = clientX; pt.y = clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+function renderStepSwitch(name){
+  const ptr = document.getElementById('ptr-' + name);
+  const idx = name === 'Iz' ? stepState.IzIdx : stepState.RzIdx;
+  ptr.setAttribute('transform', `rotate(${SW_ANGLE[idx + 1]})`);
+}
+
+function renderStep(){
+  renderStepSwitch('Iz');
+  renderStepSwitch('Rz');
+  document.getElementById('val-Iz').textContent = IZ_TABLE[stepState.IzIdx] + ' А';
+  document.getElementById('val-Rz').textContent = RZ_TABLE[stepState.RzIdx] + ' Ом';
+
+  const f1 = document.getElementById('foot1-marker');
+  const f2 = document.getElementById('foot2-marker');
+  if (stepState.r1 !== null){
+    f1.setAttribute('opacity', 1);
+    f1.setAttribute('transform', `translate(${150 + stepState.r1 * PX_PER_M},340)`);
+  } else f1.setAttribute('opacity', 0);
+  if (stepState.r2 !== null){
+    f2.setAttribute('opacity', 1);
+    f2.setAttribute('transform', `translate(${150 + stepState.r2 * PX_PER_M},340)`);
+  } else f2.setAttribute('opacity', 0);
+
+  const result = calculateStepVoltage();
+  document.getElementById('step-r1').textContent = 'Нога 1: ' + (stepState.r1 !== null ? stepState.r1.toFixed(1) + ' м' : '—');
+  document.getElementById('step-r2').textContent = 'Нога 2: ' + (stepState.r2 !== null ? stepState.r2.toFixed(1) + ' м' : '—');
+
+  const verdictEl = document.getElementById('step-verdict');
+  if (!result.ready){
+    document.getElementById('step-phi').textContent = 'Потенціали: φ1=— В, φ2=— В';
+    document.getElementById('step-u').textContent = 'Напруга кроку: — В';
+    document.getElementById('step-i').textContent = 'Струм через людину: — мА';
+    verdictEl.textContent = 'Постав обидві ноги на лінії ліворуч';
+    verdictEl.style.fill = '#fff';
+  } else {
+    document.getElementById('step-phi').textContent =
+      `Потенціали: φ1=${result.phi1.toFixed(1)} В, φ2=${result.phi2.toFixed(1)} В`;
+    document.getElementById('step-u').textContent =
+      'Напруга кроку: ' + result.Ustep.toFixed(1) + ' В';
+    document.getElementById('step-i').textContent =
+      'Струм через людину: ' + (result.bodyCurrent * 1000).toFixed(1) + ' мА';
+    const effect = currentEffect(result.bodyCurrent * 1000);
+    verdictEl.textContent = 'Дія струму: ' + effect.text;
+    verdictEl.style.fill = effect.color;
+  }
+  saveSession();
+}
+
+document.getElementById('step-axis').addEventListener('click', (evt) => {
+  const svg = document.getElementById('step-panel');
+  const p = svgPoint(svg, evt.clientX, evt.clientY);
+  let r = (p.x - 150) / PX_PER_M;
+  r = Math.max(0.1, Math.min(5.9, r));
+  const completingPlacement = (stepState.r1 !== null && stepState.r2 === null);
+  if (stepState.r1 === null) stepState.r1 = r;
+  else if (stepState.r2 === null) stepState.r2 = r;
+  else { stepState.r1 = r; stepState.r2 = null; }
+  renderStep();
+  if (completingPlacement) logModule2Result();
+});
+document.getElementById('ctrl-Iz').addEventListener('click', () => {
+  stepState.IzIdx = (stepState.IzIdx + 1) % 4;
+  renderStep();
+});
+document.getElementById('ctrl-Rz').addEventListener('click', () => {
+  stepState.RzIdx = (stepState.RzIdx + 1) % 4;
+  renderStep();
+});
+
+renderStep();
+
+/* ===================== СТАРТОВИЙ ЕКРАН (ПІБ + ГРУПА) ===================== */
+const studentInfo = { name: '', group: '' };
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  const name = document.getElementById('student-name').value.trim();
+  const group = document.getElementById('student-group').value.trim();
+  const errEl = document.getElementById('start-error');
+  if (!name || !group){
+    errEl.textContent = 'Будь ласка, заповни і ПІБ, і групу.';
+    return;
+  }
+  studentInfo.name = name;
+  studentInfo.group = group;
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('app-content').style.display = '';
+  saveSession();
+});
+
+/* ===================== ЛОГУВАННЯ РЕЗУЛЬТАТІВ ===================== */
+const resultsLog = [];
+
+function addResultRow(row){
+  resultsLog.push(row);
+  renderResultsTable();
+}
+
+function logModule1Result(){
+  const result = calculateCircuit(panelState);
+  const mA = result.bodyCurrent * 1000;
+  const breakerName = DEVICE_BREAKER[panelState.faultDevice] || '—';
+  addResultRow({
+    module: 'Модуль 1',
+    grounding: panelState.groundingSystem || '—',
+    pen: panelState.penBroken ? 'так' : 'ні',
+    scenario: panelState.faultDevice ? ('пробій: ' + panelState.faultDevice) : 'без пробою',
+    rch: RESISTOR_TABLE.Rch[panelState.switches.SW6 - 1],
+    rsh: RESISTOR_TABLE.Rshoes[panelState.switches.SW7 - 1],
+    breaker: breakerName + (panelState.faultDevice && !panelState.breakers[breakerName] ? ' (спрацював)' : ''),
+    voltage: result.touchVoltage.toFixed(0),
+    current: mA.toFixed(1),
+    effect: currentEffect(mA).text
+  });
+}
+
+function logModule2Result(){
+  const result = calculateStepVoltage();
+  if (!result.ready) return;
+  const mA = result.bodyCurrent * 1000;
+  addResultRow({
+    module: 'Модуль 2',
+    grounding: '—',
+    pen: '—',
+    scenario: `Iз=${result.Iz}А, Rз=${result.Rz}Ом, r1=${stepState.r1.toFixed(1)}м, r2=${stepState.r2.toFixed(1)}м`,
+    rch: RESISTOR_TABLE.Rch[panelState.switches.SW6 - 1],
+    rsh: RESISTOR_TABLE.Rshoes[panelState.switches.SW7 - 1],
+    breaker: '—',
+    voltage: result.Ustep.toFixed(1),
+    current: mA.toFixed(1),
+    effect: currentEffect(mA).text
+  });
+}
+
+function renderResultsTable(){
+  const body = document.getElementById('results-body');
+  const empty = document.getElementById('results-empty');
+  body.innerHTML = '';
+  empty.style.display = resultsLog.length ? 'none' : '';
+  resultsLog.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${r.module}</td><td>${r.grounding}</td><td>${r.pen}</td>
+      <td>${r.scenario}</td><td>${r.rch}</td><td>${r.rsh}</td><td>${r.breaker}</td>
+      <td>${r.voltage}</td><td>${r.current}</td><td>${r.effect}</td>`;
+    body.appendChild(tr);
+  });
+}
+renderResultsTable();
+
+/* ===================== ЗВІТ (ДРУК / PDF) ===================== */
+document.getElementById('report-btn').addEventListener('click', () => {
+  const conclusion = document.getElementById('conclusion-text').value.trim();
+  if (!resultsLog.length){
+    alert('Спочатку спробуй хоча б один сценарій (торкнись манекеном приладу або постав ноги в Модулі 2) — таблиця результатів порожня.');
+    return;
+  }
+  if (!conclusion){
+    alert('Будь ласка, напиши висновок перед формуванням звіту.');
+    return;
+  }
+  document.getElementById('report-name').textContent = studentInfo.name;
+  document.getElementById('report-group').textContent = studentInfo.group;
+  document.getElementById('report-date').textContent = new Date().toLocaleDateString('uk-UA');
+  document.getElementById('report-conclusion').textContent = conclusion;
+
+  const snapshotHost = document.getElementById('report-panel-snapshot');
+  const activePanel = document.getElementById('module-2').style.display === 'none'
+    ? document.getElementById('panel')
+    : document.getElementById('step-panel');
+  snapshotHost.innerHTML = '';
+  if (activePanel) snapshotHost.appendChild(activePanel.cloneNode(true));
+
+  const reportTable = document.getElementById('report-table');
+  let html = '<thead><tr><th>№</th><th>Модуль</th><th>Заземлення</th><th>Обрив PEN</th><th>Сценарій</th><th>Rл</th><th>Rвзуття</th><th>Автомат</th><th>U дотику</th><th>I людини (мА)</th><th>Дія струму</th></tr></thead><tbody>';
+  resultsLog.forEach((r, i) => {
+    html += `<tr><td>${i+1}</td><td>${r.module}</td><td>${r.grounding}</td><td>${r.pen}</td><td>${r.scenario}</td><td>${r.rch}</td><td>${r.rsh}</td><td>${r.breaker}</td><td>${r.voltage}</td><td>${r.current}</td><td>${r.effect}</td></tr>`;
+  });
+  html += '</tbody>';
+  reportTable.innerHTML = html;
+
+  saveSession();
+
+  const originalTitle = document.title;
+  document.title = 'ELECTROSAFETY';
+  const restoreTitle = () => { document.title = originalTitle; window.removeEventListener('afterprint', restoreTitle); };
+  window.addEventListener('afterprint', restoreTitle);
+
+  window.print();
+});
+
+document.getElementById('conclusion-text').addEventListener('input', saveSession);
+
+/* ===================== ВІДНОВЛЕННЯ СЕСІЇ ПІСЛЯ ЗБОЮ/ПЕРЕЗАВАНТАЖЕННЯ ===================== */
+(function tryRestoreSession(){
+  const saved = loadSession();
+  if (!saved || !saved.studentInfo || !saved.studentInfo.name || !saved.studentInfo.group) return;
+
+  studentInfo.name = saved.studentInfo.name;
+  studentInfo.group = saved.studentInfo.group;
+
+  if (saved.panelState){
+    panelState.network = saved.panelState.network;
+    if (saved.panelState.breakers) Object.assign(panelState.breakers, saved.panelState.breakers);
+    if (saved.panelState.switches) Object.assign(panelState.switches, saved.panelState.switches);
+    panelState.groundingSystem = saved.panelState.groundingSystem;
+    panelState.penBroken = saved.panelState.penBroken;
+    panelState.faultDevice = saved.panelState.faultDevice;
+  }
+  if (saved.stepState) Object.assign(stepState, saved.stepState);
+  if (typeof saved.tutorialIndex === 'number') tutorialIndex = Math.min(saved.tutorialIndex, TUTORIAL.length - 1);
+  if (Array.isArray(saved.resultsLog)) saved.resultsLog.forEach(r => resultsLog.push(r));
+  if (saved.conclusion) document.getElementById('conclusion-text').value = saved.conclusion;
+
+  document.getElementById('student-name').value = studentInfo.name;
+  document.getElementById('student-group').value = studentInfo.group;
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('app-content').style.display = '';
+
+  if (saved.activeModule === 2){
+    activeModule = 2;
+    document.getElementById('module-1').style.display = 'none';
+    document.getElementById('module-2').style.display = '';
+    document.getElementById('tab-module2').classList.add('active');
+    document.getElementById('tab-module1').classList.remove('active');
+  }
+
+  render();
+  renderStep();
+  renderResultsTable();
+})();
+</script>
+
+
+<script>
+(function(){
+  var ov=document.getElementById('info-overlay');
+  function open(){ ov.classList.add('open'); }
+  function close(){ ov.classList.remove('open'); }
+  document.getElementById('info-btn').addEventListener('click',open);
+  document.getElementById('info-close').addEventListener('click',close);
+  document.getElementById('info-ok').addEventListener('click',close);
+  ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') close(); });
+})();
+</script>
+</body>
+</html>
